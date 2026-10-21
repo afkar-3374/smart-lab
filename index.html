@@ -995,6 +995,8 @@ if (typeof mqtt === 'undefined') {
     if (topic === TOPIC + '/state') {
       state = data;
       stateAt = Date.now();
+      // Fresh data proves the device is online, even if an old "offline" is retained.
+      deviceStatus = 'online';
       render();
     } else if (topic === TOPIC + '/status') {
       deviceStatus = data;
