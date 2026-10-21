@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SMART LAB</title>
+
+<script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<style>
+:root {
+  --bg: #0b1220;
+  --panel: #151f32;
+  --panel-2: #1c2940;
+  --line: #2a3a57;
+  --text: #e8eefb;
+  --muted: #9fb0cc;
+  --accent: #3b82f6;
+  --ok: #34d399;
+  --warn: #fbbf24;
+  --bad: #f87171;
+  --header: #13224a;
+  --chart-grid: rgba(159, 176, 204, 0.15);
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f3f6fb;
+    --panel: #ffffff;
+    --panel-2: #eef2f8;
+    --line: #d7deea;
+    --text: #0f172a;
+    --muted: #55637d;
+    --accent: #2563eb;
+    --ok: #059669;
+    --warn: #b45309;
+    --bad: #dc2626;
+    --header: #1e3a8a;
+    --chart-grid: rgba(15, 23, 42, 0.08);
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+header {
+  background: var(--header);
+  color: #fff;
+  padding: 18px 16px 0;
+}
+
+.head-row {
+  max-width: 1000px;
+  margin: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+header h1 { margin: 0; font-size: 26px; letter-spacing: 0.5px; }
+header p { margin: 4px 0 0; color: #c7d6f5; font-size: 14px; }
+
+.pills { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.pill {
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  white-space: nowrap;
+}
+
+.pill::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  background: #94a3b8;
+}
+
+.pill.ok::before { background: #34d399; }
+.pill.warn::before { background: #fbbf24; }
+.pill.bad::before { background: #f87171; }
+
+nav {
+  max-width: 1000px;
+  margin: 14px auto 0;
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+}
+
+nav button {
+  flex: 0 0 auto;
+  border: 0;
+  background: transparent;
+  color: #c7d6f5;
+  padding: 10px 14px;
+  font-size: 15px;
+  border-radius: 10px 10px 0 0;
+  cursor: pointer;
+}
+
+nav button.active {
+  background: var(--bg);
+  color: var(--text);
+  font-weight: 600;
+}
+
+main {
+  max-width: 1000px;
+  margin: auto;
+  padding: 16px;
+}
+
+.tab { display: none; }
+.tab.active { display: block; }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.grid .card { margin-bottom: 0; text-align: center; }
+
+.card h2 { margin: 0 0 12px; font-size: 18px; }
+
+.label { color: var(--muted); font-size: 14px; }
+
+.value {
+  font-size: 26px;
+  font-weight: 700;
+  margin-top: 10px;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+
+.status { font-size: 18px; }
+
+.ok { color: var(--ok); }
+.warn { color: var(--warn); }
+.bad { color: var(--bad); }
+
+.alarm-card.bad { border-color: var(--bad); box-shadow: 0 0 0 2px rgba(248, 113, 113, 0.35); }
+
+.chart-box { position: relative; height: 260px; }
+
+.note { color: var(--muted); font-size: 13px; line-height: 1.6; margin: 0; }
+
+/* Inspection */
+
+.inspect-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  gap: 12px;
+}
+
+.inspect-grid .card { margin-bottom: 0; }
+
+.sensor-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.sensor-head h2 { margin: 0; }
+
+.badge {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+
+.hint {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0 0 10px;
+  min-height: 1em;
+}
+
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+
+td {
+  padding: 7px 0;
+  border-top: 1px solid var(--line);
+  vertical-align: top;
+}
+
+td:first-child { color: var(--muted); padding-right: 10px; }
+td:last-child { text-align: right; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+
+/* Forms */
+
+label.field { display: block; margin: 14px 0 6px; color: var(--muted); font-size: 14px; }
+
+input, select {
+  width: 100%;
+  padding: 12px;
+  font-size: 16px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+.row { display: flex; gap: 8px; align-items: center; }
+.row input { flex: 1; }
+
+.btn {
+  border: 0;
+  border-radius: 10px;
+  padding: 12px 18px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--accent);
+  color: #fff;
+}
+
+.btn.secondary { background: var(--panel-2); color: var(--text); border: 1px solid var(--line); }
+.btn.danger { background: transparent; color: var(--bad); border: 1px solid var(--bad); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+
+.check { display: flex; gap: 8px; align-items: center; margin-top: 10px; color: var(--muted); font-size: 14px; }
+.check input { width: auto; }
+
+#log {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+}
+
+#log li { padding: 8px 0; border-top: 1px solid var(--line); }
+#log li:first-child { border-top: 0; }
+#log time { color: var(--muted); margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+.empty {
+  text-align: center;
+  color: var(--muted);
+  padding: 30px 10px;
+}
+
+footer { text-align: center; padding: 20px 16px 30px; color: var(--muted); font-size: 13px; }
+</style>
+</head>
+
+<body>
+
+<header>
+  <div class="head-row">
+    <div>
+      <h1>SMART LAB</h1>
+      <p>Laboratory Monitoring and Safety System</p>
+    </div>
+    <div class="pills">
+      <span class="pill" id="brokerPill">Broker: not connected</span>
+      <span class="pill" id="devicePill">Device: --</span>
+    </div>
+  </div>
+  <nav>
+    <button data-tab="dashboard" class="active">Dashboard</button>
+    <button data-tab="inspect">Inspection</button>
+    <button data-tab="settings">Wi-Fi &amp; Settings</button>
+  </nav>
+</header>
+
+<main>
+
+  <!-- ================= DASHBOARD ================= -->
+  <section class="tab active" id="tab-dashboard">
+
+    <div class="grid">
+      <div class="card">
+        <div class="label">Temperature</div>
+        <div class="value"><span id="temp">--</span> °C</div>
+      </div>
+      <div class="card">
+        <div class="label">Humidity</div>
+        <div class="value"><span id="hum">--</span> %</div>
+      </div>
+      <div class="card">
+        <div class="label">MQ-2 Raw Reading</div>
+        <div class="value" id="mq2">--</div>
+      </div>
+      <div class="card">
+        <div class="label">Gas / Smoke Status</div>
+        <div class="value status" id="gas">--</div>
+      </div>
+      <div class="card">
+        <div class="label">Flame Sensor</div>
+        <div class="value status" id="flame">--</div>
+      </div>
+      <div class="card">
+        <div class="label">People Inside</div>
+        <div class="value" id="people">--</div>
+      </div>
+    </div>
+
+    <div class="card alarm-card" id="alertCard">
+      <h2>Emergency Status</h2>
+      <div class="value status" id="alert">Waiting for device...</div>
+    </div>
+
+    <div class="card">
+      <h2>Temperature History</h2>
+      <div class="chart-box"><canvas id="tempChart"></canvas></div>
+    </div>
+
+    <div class="card">
+      <h2>Humidity History</h2>
+      <div class="chart-box"><canvas id="humChart"></canvas></div>
+    </div>
+
+    <div class="card">
+      <h2>System Information</h2>
+      <p class="note">
+        Data arrives from the ESP32 through the MQTT broker every two seconds.
+        Charts add one point every 10 seconds and keep the latest 100 points in this browser tab.
+        The MQ-2 value is a raw analog reading, not gas concentration.
+        The buzzer in the lab works even when the internet is down.
+      </p>
+    </div>
+  </section>
+
+  <!-- ================= INSPECTION ================= -->
+  <section class="tab" id="tab-inspect">
+    <div id="inspectEmpty" class="card empty">Waiting for data from the device...</div>
+    <div class="inspect-grid" id="inspectGrid"></div>
+  </section>
+
+  <!-- ================= SETTINGS ================= -->
+  <section class="tab" id="tab-settings">
+
+    <div class="card">
+      <h2>Connection</h2>
+      <label class="field" for="deviceId">Device ID (shown in the Serial Monitor, e.g. SL-A1B2C3)</label>
+      <input id="deviceId" placeholder="SL-XXXXXX" autocomplete="off" autocapitalize="characters">
+
+      <label class="field" for="broker">MQTT broker (must match MQTT_HOST in the firmware)</label>
+      <select id="broker">
+        <option value="wss://broker.hivemq.com:8884/mqtt">broker.hivemq.com</option>
+        <option value="wss://test.mosquitto.org:8081">test.mosquitto.org</option>
+        <option value="wss://broker.emqx.io:8084/mqtt">broker.emqx.io</option>
+      </select>
+
+      <div class="actions">
+        <button class="btn" id="connectBtn">Connect</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Current Network</h2>
+      <table>
+        <tr><td>Wi-Fi name</td><td id="curSsid">--</td></tr>
+        <tr><td>Signal</td><td id="curRssi">--</td></tr>
+        <tr><td>Local IP</td><td id="curIp">--</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>Change Wi-Fi</h2>
+      <p class="note">
+        The device tests the new network first. If it cannot connect within 20 seconds,
+        it goes back to the current network, so a typo will not take it offline.
+        The command is encrypted with your admin key before it is sent.
+      </p>
+
+      <label class="field" for="newSsid">New Wi-Fi name</label>
+      <input id="newSsid" maxlength="32" autocomplete="off">
+
+      <label class="field" for="newPass">New Wi-Fi password</label>
+      <div class="row">
+        <input id="newPass" type="password" maxlength="63" autocomplete="new-password">
+        <button class="btn secondary" id="showPass" type="button">Show</button>
+      </div>
+
+      <div class="actions">
+        <button class="btn" id="wifiBtn">Change Wi-Fi</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Admin Key</h2>
+      <label class="field" for="adminKey">Admin key (ADMIN_KEY in the firmware)</label>
+      <input id="adminKey" type="password" autocomplete="off">
+      <label class="check">
+        <input type="checkbox" id="rememberKey"> Remember until this tab is closed
+      </label>
+    </div>
+
+    <div class="card">
+      <h2>Device Actions</h2>
+      <div class="actions">
+        <button class="btn secondary" id="resetBtn">Reset people counter</button>
+        <button class="btn danger" id="restartBtn">Restart device</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Command Log</h2>
+      <ul id="log"><li class="note">No commands sent yet.</li></ul>
+    </div>
+  </section>
+
+</main>
+
+<footer>SMART LAB | ESP32 + MQTT Online Dashboard</footer>
+
+<script>
+'use strict';
+
+// =====================================================
+// HELPERS
+// =====================================================
+
+const $ = id => document.getElementById(id);
+
+function store(kind, key, value) {
+  try {
+    const s = kind === 'session' ? sessionStorage : localStorage;
+    if (value === undefined) return s.getItem(key);
+    if (value === null) s.removeItem(key); else s.setItem(key, value);
+  } catch (e) {
+    return null;
+  }
+}
+
+function esc(v) {
+  return String(v).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+function fmt(v, digits) {
+  if (v === null || v === undefined) return '--';
+  return digits === undefined ? String(v) : Number(v).toFixed(digits);
+}
+
+function duration(sec) {
+  if (sec === null || sec === undefined) return 'never';
+  if (sec < 60) return sec + ' s';
+  if (sec < 3600) return Math.floor(sec / 60) + ' min ' + (sec % 60) + ' s';
+  if (sec < 86400) return Math.floor(sec / 3600) + ' h ' + Math.floor(sec % 3600 / 60) + ' min';
+  return Math.floor(sec / 86400) + ' d ' + Math.floor(sec % 86400 / 3600) + ' h';
+}
+
+function setPill(el, cls, text) {
+  el.className = 'pill ' + cls;
+  el.textContent = text;
+}
+
+function b64(bytes) {
+  let s = '';
+  bytes.forEach(b => s += String.fromCharCode(b));
+  return btoa(s);
+}
+
+// =====================================================
+// TABS
+// =====================================================
+
+document.querySelectorAll('nav button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b === btn));
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.id === 'tab-' + btn.dataset.tab));
+    store('local', 'sl-tab', btn.dataset.tab);
+  });
+});
+
+const savedTab = store('local', 'sl-tab');
+if (savedTab) {
+  const btn = document.querySelector('nav button[data-tab="' + savedTab + '"]');
+  if (btn) btn.click();
+}
+
+// =====================================================
+// CHARTS
+// =====================================================
+
+const chartsOK = typeof Chart !== 'undefined';
+
+let labels = [];
+let temperatures = [];
+let humidities = [];
+let lastChartTime = 0;
+
+function makeChart(canvasId, label, data, color) {
+  if (!chartsOK) {
+    $(canvasId).parentElement.innerHTML = '<p class="note">Chart library could not load.</p>';
+    return null;
+  }
+
+  const css = getComputedStyle(document.documentElement);
+  const muted = css.getPropertyValue('--muted').trim();
+  const grid = css.getPropertyValue('--chart-grid').trim();
+
+  return new Chart($(canvasId), {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: label,
+        data: data,
+        borderColor: color,
+        backgroundColor: color + '26',
+        fill: true,
+        tension: 0.25,
+        pointRadius: 0,
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { labels: { color: muted } } },
+      scales: {
+        x: { ticks: { color: muted, maxTicksLimit: 6 }, grid: { color: grid } },
+        y: { ticks: { color: muted }, grid: { color: grid } }
+      }
+    }
+  });
+}
+
+const tempChart = makeChart('tempChart', 'Temperature (°C)', temperatures, '#3b82f6');
+const humChart = makeChart('humChart', 'Humidity (%)', humidities, '#06b6d4');
+
+// =====================================================
+// MQTT CONNECTION
+// =====================================================
+
+let client = null;
+let deviceId = '';
+let state = null;
+let stateReceivedAt = 0;
+let deviceStatus = 'unknown';
+let lastAlarm = false;
+
+const topic = name => 'smartlab/' + deviceId + '/' + name;
+
+$('deviceId').value = store('local', 'sl-device') || '';
+$('broker').value = store('local', 'sl-broker') || $('broker').value;
+
+if (store('session', 'sl-key')) {
+  $('adminKey').value = store('session', 'sl-key');
+  $('rememberKey').checked = true;
+}
+
+function connect() {
+
+  deviceId = $('deviceId').value.trim().toUpperCase();
+  $('deviceId').value = deviceId;
+
+  if (!deviceId) {
+    setPill($('devicePill'), 'warn', 'Device: enter ID in Settings');
+    document.querySelector('nav button[data-tab="settings"]').click();
+    $('deviceId').focus();
+    return;
+  }
+
+  if (typeof mqtt === 'undefined') {
+    setPill($('brokerPill'), 'bad', 'MQTT library failed to load');
+    return;
+  }
+
+  store('local', 'sl-device', deviceId);
+  store('local', 'sl-broker', $('broker').value);
+
+  if (client) client.end(true);
+
+  state = null;
+  deviceStatus = 'unknown';
+  labels.length = temperatures.length = humidities.length = 0;
+  if (tempChart) { tempChart.update(); humChart.update(); }
+
+  setPill($('brokerPill'), 'warn', 'Broker: connecting...');
+  setPill($('devicePill'), '', 'Device: ' + deviceId);
+
+  client = mqtt.connect($('broker').value, {
+    clientId: 'slweb-' + Math.random().toString(16).slice(2, 10),
+    clean: true,
+    reconnectPeriod: 3000,
+    connectTimeout: 10000
+  });
+
+  client.on('connect', () => {
+    setPill($('brokerPill'), 'ok', 'Broker: connected');
+    client.subscribe(topic('#'), { qos: 1 });
+  });
+
+  client.on('reconnect', () => setPill($('brokerPill'), 'warn', 'Broker: reconnecting...'));
+  client.on('offline', () => setPill($('brokerPill'), 'bad', 'Broker: offline'));
+  client.on('error', () => setPill($('brokerPill'), 'bad', 'Broker: error'));
+
+  client.on('message', (t, payload) => {
+    const text = payload.toString();
+
+    if (t === topic('state')) {
+      try {
+        state = JSON.parse(text);
+        stateReceivedAt = Date.now();
+        render();
+      } catch (e) { /* ignore malformed */ }
+
+    } else if (t === topic('status')) {
+      deviceStatus = text;
+      updateDevicePill();
+
+    } else if (t === topic('ack')) {
+      try { handleAck(JSON.parse(text)); } catch (e) { /* ignore */ }
+    }
+  });
+}
+
+$('connectBtn').addEventListener('click', connect);
+
+function updateDevicePill() {
+  const age = (Date.now() - stateReceivedAt) / 1000;
+  const pill = $('devicePill');
+
+  if (deviceStatus === 'offline') {
+    setPill(pill, 'bad', deviceId + ': offline');
+  } else if (!state) {
+    setPill(pill, 'warn', deviceId + ': waiting for data');
+  } else if (age > 10) {
+    setPill(pill, 'warn', deviceId + ': no data for ' + duration(Math.round(age)));
+  } else {
+    setPill(pill, 'ok', deviceId + ': live');
+  }
+}
+
+setInterval(updateDevicePill, 1000);
+
+// =====================================================
+// DASHBOARD
+// =====================================================
+
+function playBrowserAlarm() {
+  try {
+    const audio = new AudioContext();
+    const oscillator = audio.createOscillator();
+    const gain = audio.createGain();
+    oscillator.connect(gain);
+    gain.connect(audio.destination);
+    oscillator.frequency.value = 880;
+    gain.gain.value = 0.12;
+    oscillator.start();
+    setTimeout(() => { oscillator.stop(); audio.close(); }, 700);
+  } catch (e) {
+    console.log('Browser audio unavailable');
+  }
+}
+
+function setStatus(el, text, cls) {
+  el.textContent = text;
+  el.className = 'value status ' + cls;
+}
+
+function render() {
+  const d = state;
+
+  $('temp').textContent = fmt(d.temperature, 1);
+  $('hum').textContent = fmt(d.humidity, 1);
+  $('mq2').textContent = fmt(d.mq2Raw);
+  $('people').textContent = fmt(d.people);
+
+  const warming = d.sensors && d.sensors.mq2.warmingUp;
+  setStatus($('gas'), d.gas ? 'ALERT' : warming ? 'Warming up' : 'No trigger',
+            d.gas ? 'bad' : warming ? 'warn' : 'ok');
+  setStatus($('flame'), d.flame ? 'FLAME ALERT' : 'No trigger', d.flame ? 'bad' : 'ok');
+  setStatus($('alert'), d.alert, d.alarm ? 'bad' : warming ? 'warn' : 'ok');
+  $('alertCard').classList.toggle('bad', !!d.alarm);
+
+  // Add a graph sample every 10 seconds.
+  const now = Date.now();
+  if (now - lastChartTime >= 10000 && d.temperature !== null && d.humidity !== null) {
+    lastChartTime = now;
+    labels.push(new Date().toLocaleTimeString());
+    temperatures.push(d.temperature);
+    humidities.push(d.humidity);
+
+    if (labels.length > 100) {
+      labels.shift();
+      temperatures.shift();
+      humidities.shift();
+    }
+
+    if (tempChart) { tempChart.update(); humChart.update(); }
+  }
+
+  // Beep once when a new alarm starts.
+  if (d.alarm && !lastAlarm) playBrowserAlarm();
+  lastAlarm = d.alarm;
+
+  if (d.sensors) renderInspection(d);
+
+  if (d.system) {
+    $('curSsid').textContent = d.system.ssid || '--';
+    $('curRssi').textContent = d.system.rssi + ' dBm (' + signalQuality(d.system.rssi)[0] + ')';
+    $('curIp').textContent = d.system.ip;
+  }
+
+  updateDevicePill();
+}
+
+// =====================================================
+// INSPECTION
+// =====================================================
+
+// How long each IR beam has been blocked (tracked in the browser).
+const irBlockedSince = { a: 0, b: 0 };
+
+function signalQuality(rssi) {
+  if (rssi >= -60) return ['Excellent', 'ok'];
+  if (rssi >= -70) return ['Good', 'ok'];
+  if (rssi >= -80) return ['Weak', 'warn'];
+  return ['Very weak', 'bad'];
+}
+
+function levelName(level) {
+  return level ? 'HIGH (1)' : 'LOW (0)';
+}
+
+function panel(title, health, hint, rows) {
+  const [label, cls] = health;
+  return '<div class="card">' +
+    '<div class="sensor-head"><h2>' + esc(title) + '</h2>' +
+    '<span class="badge ' + cls + '">' + esc(label) + '</span></div>' +
+    '<p class="hint">' + esc(hint) + '</p>' +
+    '<table>' + rows.map(r => '<tr><td>' + esc(r[0]) + '</td><td>' + esc(r[1]) + '</td></tr>').join('') +
+    '</table></div>';
+}
+
+function renderInspection(d) {
+  const s = d.sensors;
+  const sys = d.system;
+  const now = Date.now();
+  const html = [];
+
+  // DHT22
+  const dh = s.dht22;
+  html.push(panel('DHT22 · Temp & Humidity',
+    dh.ok ? ['OK', 'ok'] : ['FAULT', 'bad'],
+    dh.ok ? 'Sensor responding normally.'
+          : 'No valid reading. Check wiring, 3.3 V supply and the 10 kΩ pull-up on the data pin.',
+    [
+      ['GPIO', dh.pin],
+      ['Temperature', fmt(dh.temperature, 1) + ' °C'],
+      ['Humidity', fmt(dh.humidity, 1) + ' %'],
+      ['Heat index', fmt(dh.heatIndex, 1) + ' °C'],
+      ['Good reads', dh.goodReads],
+      ['Read errors', dh.errors + (dh.goodReads + dh.errors ? ' (' +
+        (100 * dh.errors / (dh.goodReads + dh.errors)).toFixed(1) + '%)' : '')],
+      ['Last good read', dh.lastOkAgo === null ? 'never' : duration(dh.lastOkAgo) + ' ago']
+    ]));
+
+  // MQ-2
+  const m = s.mq2;
+  let mqHealth = ['OK', 'ok'];
+  let mqHint = 'Reading below the alarm threshold.';
+  if (m.warmingUp) {
+    mqHealth = ['WARMING UP', 'warn'];
+    mqHint = 'Heater warming up. Gas alarm starts in ' + duration(m.warmupLeft) + '.';
+  } else if (m.triggered) {
+    mqHealth = ['ALERT', 'bad'];
+    mqHint = 'Reading is above the threshold. Ventilate and check the lab.';
+  } else if (m.raw <= 5) {
+    mqHealth = ['CHECK', 'warn'];
+    mqHint = 'Reading is near zero. The AO wire may be disconnected.';
+  } else if (m.raw >= 4090) {
+    mqHealth = ['CHECK', 'warn'];
+    mqHint = 'ADC is saturated. Check the voltage divider on AO (max 3.3 V into GPIO34).';
+  }
+  html.push(panel('MQ-2 · Gas / Smoke', mqHealth, mqHint, [
+    ['GPIO', m.pin + ' (ADC1)'],
+    ['Raw reading', m.raw + ' / 4095'],
+    ['Voltage at pin', m.mV + ' mV'],
+    ['Alarm threshold', m.threshold + ' (clears below ' + (m.threshold - m.hysteresis) + ')'],
+    ['Level vs threshold', Math.round(100 * m.raw / m.threshold) + ' %'],
+    ['Min / max since warm-up', fmt(m.min) + ' / ' + fmt(m.max)],
+    ['Warm-up left', m.warmingUp ? duration(m.warmupLeft) : 'done']
+  ]));
+
+  // Flame
+  const f = s.flame;
+  html.push(panel('Flame Sensor', f.detected ? ['ALERT', 'bad'] : ['OK', 'ok'],
+    f.detected ? 'Flame detected. The buzzer is sounding.' : 'No flame detected.',
+    [
+      ['GPIO', f.pin],
+      ['Pin level now', levelName(f.level)],
+      ['Active when', levelName(f.activeLevel)],
+      ['Detected', f.detected ? 'YES' : 'No'],
+      ['Times triggered', f.triggers],
+      ['Last trigger', f.lastTriggerAgo === null ? 'never' : duration(f.lastTriggerAgo) + ' ago']
+    ]));
+
+  // IR door sensors
+  const ir = s.ir;
+  irBlockedSince.a = ir.a ? (irBlockedSince.a || now) : 0;
+  irBlockedSince.b = ir.b ? (irBlockedSince.b || now) : 0;
+  const stuck = ['a', 'b'].filter(k => irBlockedSince[k] && now - irBlockedSince[k] > 15000);
+  html.push(panel('IR People Counter',
+    stuck.length ? ['CHECK', 'warn'] : ['OK', 'ok'],
+    stuck.length ? 'Sensor ' + stuck.join(' & ').toUpperCase() +
+                   ' blocked for over 15 s. Check for an obstacle or adjust the sensitivity screw.'
+                 : 'A then B counts an entry, B then A counts an exit.',
+    [
+      ['GPIO A / B', ir.pinA + ' / ' + ir.pinB],
+      ['Sensor A', (ir.a ? 'BLOCKED' : 'clear') + ' · ' + levelName(ir.levelA)],
+      ['Sensor B', (ir.b ? 'BLOCKED' : 'clear') + ' · ' + levelName(ir.levelB)],
+      ['Counter state', ir.door],
+      ['People inside', d.people],
+      ['Entries / exits', ir.entries + ' / ' + ir.exits]
+    ]));
+
+  // Buzzer
+  const bz = s.buzzer;
+  html.push(panel('Buzzer', bz.on ? ['SOUNDING', 'bad'] : ['SILENT', 'ok'],
+    'Sounds whenever gas or flame is detected. Works without internet.',
+    [
+      ['GPIO', bz.pin],
+      ['Output', bz.on ? 'ON' : 'off'],
+      ['Alarms since boot', bz.alarms]
+    ]));
+
+  // System
+  const sig = signalQuality(sys.rssi);
+  const brownout = sys.reset.indexOf('Brownout') === 0;
+  const lowHeap = sys.minHeap < 30000;
+  html.push(panel('ESP32 System',
+    brownout || sig[1] === 'bad' || lowHeap ? ['CHECK', 'warn'] : ['OK', 'ok'],
+    brownout ? 'Last reset was a brownout. Use a stronger 5 V supply.'
+             : sig[1] === 'bad' ? 'Wi-Fi signal is very weak. Move the ESP32 closer to the router.'
+             : lowHeap ? 'Free memory dropped low at some point.'
+             : 'Running normally.',
+    [
+      ['Chip', sys.chip + ' @ ' + sys.cpuMHz + ' MHz'],
+      ['Firmware', d.v],
+      ['Uptime', duration(d.uptime)],
+      ['Last reset', sys.reset],
+      ['Wi-Fi', sys.ssid],
+      ['Signal', sys.rssi + ' dBm (' + sig[0] + ')'],
+      ['IP / MAC', sys.ip + ' / ' + sys.mac],
+      ['Free memory', Math.round(sys.heap / 1024) + ' KB (lowest ' + Math.round(sys.minHeap / 1024) + ' KB)'],
+      ['MQTT broker', sys.broker],
+      ['Reconnects Wi-Fi / MQTT', sys.wifiReconnects + ' / ' + sys.mqttReconnects]
+    ]));
+
+  $('inspectEmpty').style.display = 'none';
+  $('inspectGrid').innerHTML = html.join('');
+}
+
+// =====================================================
+// SECURE COMMANDS
+// =====================================================
+
+// Key = SHA-256(adminKey + ":" + deviceId), same as the firmware.
+async function deriveKey(adminKey) {
+  const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(adminKey + ':' + deviceId));
+  return crypto.subtle.importKey('raw', hash, 'AES-GCM', false, ['encrypt']);
+}
+
+let pending = null;   // { id, action, timer }
+
+function log(text, cls) {
+  const ul = $('log');
+  if (ul.querySelector('.note')) ul.innerHTML = '';
+  const li = document.createElement('li');
+  li.innerHTML = '<time>' + new Date().toLocaleTimeString() + '</time>';
+  const span = document.createElement('span');
+  span.textContent = text;
+  if (cls) span.className = cls;
+  li.appendChild(span);
+  ul.prepend(li);
+}
+
+function setBusy(busy) {
+  ['wifiBtn', 'resetBtn', 'restartBtn'].forEach(id => $(id).disabled = busy);
+}
+
+async function sendCommand(action, extra, timeoutMs) {
+
+  if (pending) return;
+
+  if (!client || !client.connected) { log('Not connected to the broker.', 'bad'); return; }
+  if (!state || !state.nonce) { log('No data from the device yet. Is it online?', 'bad'); return; }
+  if (!window.crypto || !crypto.subtle) { log('This browser cannot encrypt. Open the page over https.', 'bad'); return; }
+
+  const adminKey = $('adminKey').value;
+  if (!adminKey) { log('Enter the admin key first.', 'warn'); $('adminKey').focus(); return; }
+
+  store('session', 'sl-key', $('rememberKey').checked ? adminKey : null);
+
+  const id = Math.random().toString(36).slice(2, 10);
+  const body = JSON.stringify(Object.assign({ nonce: state.nonce, id: id, action: action }, extra));
+
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await deriveKey(adminKey);
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, key,
+                                                        new TextEncoder().encode(body)));
+
+  pending = {
+    id: id,
+    action: action,
+    timer: setTimeout(() => {
+      log('No reply from the device. Check that it is online.', 'warn');
+      pending = null;
+      setBusy(false);
+    }, timeoutMs)
+  };
+
+  setBusy(true);
+  client.publish(topic('cmd'), JSON.stringify({ iv: b64(iv), ct: b64(ct) }), { qos: 1 });
+}
+
+function handleAck(ack) {
+
+  // Wrong key / bad format replies cannot carry our id (device could not decrypt it).
+  if (!pending || (ack.id && ack.id !== pending.id)) return;
+
+  log(ack.msg, ack.ok ? (ack.stage === 'testing' ? 'warn' : 'ok') : 'bad');
+
+  if (ack.stage === 'testing') {
+    log('Device is switching networks. This can take up to 45 seconds...', 'warn');
+    return;
+  }
+
+  clearTimeout(pending.timer);
+
+  if (pending.action === 'wifi' && ack.ok) {
+    $('newSsid').value = '';
+    $('newPass').value = '';
+  }
+
+  pending = null;
+  setBusy(false);
+}
+
+$('wifiBtn').addEventListener('click', () => {
+  const ssid = $('newSsid').value.trim();
+  const pass = $('newPass').value;
+
+  if (!ssid) { log('Enter the new Wi-Fi name.', 'warn'); $('newSsid').focus(); return; }
+  if (pass.length > 0 && pass.length < 8) { log('Wi-Fi password must be at least 8 characters (or empty for open networks).', 'warn'); return; }
+
+  if (!confirm('Switch the device to "' + ssid + '"?')) return;
+
+  log('Sending Wi-Fi change to "' + ssid + '"...');
+  sendCommand('wifi', { ssid: ssid, pass: pass }, 75000);
+});
+
+$('resetBtn').addEventListener('click', () => {
+  if (!confirm('Reset the people counter to 0?')) return;
+  log('Sending counter reset...');
+  sendCommand('resetPeople', {}, 10000);
+});
+
+$('restartBtn').addEventListener('click', () => {
+  if (!confirm('Restart the device? The alarm is off for a few seconds while it boots.')) return;
+  log('Sending restart...');
+  sendCommand('restart', {}, 10000);
+});
+
+$('showPass').addEventListener('click', () => {
+  const show = $('newPass').type === 'password';
+  $('newPass').type = show ? 'text' : 'password';
+  $('showPass').textContent = show ? 'Hide' : 'Show';
+});
+
+$('rememberKey').addEventListener('change', () => {
+  if (!$('rememberKey').checked) store('session', 'sl-key', null);
+});
+
+// Auto-connect when a device ID was used before.
+if ($('deviceId').value) connect();
+else setPill($('devicePill'), 'warn', 'Device: enter ID in Settings');
+</script>
+
+</body>
+</html>
