@@ -2,541 +2,777 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0f1c">
 <title>SMART LAB</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
 <script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
 <style>
 :root {
-  --bg: #0b1220;
-  --panel: #151f32;
-  --panel-2: #1c2940;
-  --line: #2a3a57;
-  --text: #e8eefb;
-  --muted: #9fb0cc;
-  --accent: #3b82f6;
-  --ok: #34d399;
-  --warn: #fbbf24;
-  --bad: #f87171;
-  --header: #13224a;
-  --chart-grid: rgba(159, 176, 204, 0.15);
+  --bg: #0a0f1c;
+  --card: #121a2b;
+  --card-2: #182238;
+  --line: #233150;
+  --text: #eef3ff;
+  --muted: #8d9bb8;
+  --accent: #4f8cff;
+  --temp: #ff8a4c;
+  --hum: #38bdf8;
+  --gas: #a78bfa;
+  --people: #34d399;
+  --ok: #22c55e;
+  --warn: #f59e0b;
+  --bad: #ef4444;
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  --radius: 20px;
 }
 
 @media (prefers-color-scheme: light) {
   :root {
-    --bg: #f3f6fb;
-    --panel: #ffffff;
-    --panel-2: #eef2f8;
-    --line: #d7deea;
+    --bg: #f2f5fb;
+    --card: #ffffff;
+    --card-2: #f4f7fc;
+    --line: #e1e7f2;
     --text: #0f172a;
-    --muted: #55637d;
-    --accent: #2563eb;
-    --ok: #059669;
-    --warn: #b45309;
-    --bad: #dc2626;
-    --header: #1e3a8a;
-    --chart-grid: rgba(15, 23, 42, 0.08);
+    --muted: #64748b;
+    --shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
   }
 }
 
-* { box-sizing: border-box; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   background: var(--bg);
   color: var(--text);
+  min-height: 100vh;
 }
 
-header {
-  background: var(--header);
-  color: #fff;
-  padding: 18px 16px 0;
-}
+button { font: inherit; color: inherit; }
 
-.head-row {
-  max-width: 1000px;
+.wrap {
+  max-width: 1100px;
   margin: auto;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  padding: 16px 16px calc(24px + env(safe-area-inset-bottom));
 }
 
-header h1 { margin: 0; font-size: 26px; letter-spacing: 0.5px; }
-header p { margin: 4px 0 0; color: #c7d6f5; font-size: 14px; }
+/* ---------- Top bar ---------- */
 
-.pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
 
-.pill {
-  font-size: 12px;
-  padding: 5px 10px;
+.logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #4f8cff, #7c5cff);
+  color: #fff;
+  flex: 0 0 auto;
+}
+
+.brand { flex: 1; min-width: 0; }
+.brand h1 { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: 0.3px; white-space: nowrap; }
+.brand p { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 12px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--card);
+  border: 1px solid var(--line);
+  font-size: 13px;
+  font-weight: 600;
   white-space: nowrap;
 }
 
-.pill::before {
-  content: "";
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  margin-right: 6px;
-  background: #94a3b8;
-}
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.chip.live .dot { background: var(--ok); box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.18); }
+.chip.offline .dot { background: var(--bad); }
+.chip.waiting .dot { background: var(--warn); }
 
-.pill.ok::before { background: #34d399; }
-.pill.warn::before { background: #fbbf24; }
-.pill.bad::before { background: #f87171; }
-
-nav {
-  max-width: 1000px;
-  margin: 14px auto 0;
-  display: flex;
-  gap: 4px;
-  overflow-x: auto;
-}
-
-nav button {
-  flex: 0 0 auto;
-  border: 0;
-  background: transparent;
-  color: #c7d6f5;
-  padding: 10px 14px;
-  font-size: 15px;
-  border-radius: 10px 10px 0 0;
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--card);
   cursor: pointer;
-}
-
-nav button.active {
-  background: var(--bg);
-  color: var(--text);
+  font-size: 13px;
   font-weight: 600;
+  max-width: 180px;
 }
 
-main {
-  max-width: 1000px;
-  margin: auto;
-  padding: 16px;
+.icon-btn span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.icon-btn:hover { border-color: var(--accent); }
+
+/* ---------- Status banner ---------- */
+
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+  color: #fff;
+  background: linear-gradient(135deg, #16a34a, #0d9488);
+  box-shadow: var(--shadow);
+  transition: background 0.4s;
 }
 
-.tab { display: none; }
-.tab.active { display: block; }
+.banner.warn { background: linear-gradient(135deg, #d97706, #b45309); }
+.banner.bad { background: linear-gradient(135deg, #dc2626, #9f1239); animation: pulse 1.6s infinite; }
+.banner.idle { background: linear-gradient(135deg, #475569, #334155); }
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
+  50% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+}
+
+.banner-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.18);
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+
+.banner h2 { margin: 0; font-size: 20px; font-weight: 800; }
+.banner p { margin: 3px 0 0; font-size: 14px; opacity: 0.9; }
+
+/* ---------- Cards ---------- */
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 12px;
-  margin-bottom: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
+  margin-bottom: 16px;
 }
 
 .card {
-  background: var(--panel);
+  background: var(--card);
   border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 16px;
-  margin-bottom: 12px;
+  border-radius: var(--radius);
+  padding: 18px;
+  box-shadow: var(--shadow);
+  position: relative;
   overflow: hidden;
 }
 
-.grid .card { margin-bottom: 0; text-align: center; }
+.card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
 
-.card h2 { margin: 0 0 12px; font-size: 18px; }
+.card-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
 
-.label { color: var(--muted); font-size: 14px; }
+.card-title { font-size: 14px; font-weight: 600; color: var(--muted); }
 
-.value {
-  font-size: 26px;
-  font-weight: 700;
-  margin-top: 10px;
-  overflow-wrap: anywhere;
+.big {
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 
-.status { font-size: 18px; }
+.big small { font-size: 16px; font-weight: 600; color: var(--muted); margin-left: 3px; }
 
-.ok { color: var(--ok); }
-.warn { color: var(--warn); }
-.bad { color: var(--bad); }
+.sub { margin-top: 8px; font-size: 13px; color: var(--muted); }
 
-.alarm-card.bad { border-color: var(--bad); box-shadow: 0 0 0 2px rgba(248, 113, 113, 0.35); }
+/* Ring gauge */
 
-.chart-box { position: relative; height: 260px; }
+.gauge-row { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
 
-.note { color: var(--muted); font-size: 13px; line-height: 1.6; margin: 0; }
+.ring { width: 78px; height: 78px; flex: 0 0 auto; transform: rotate(-90deg); }
+.ring circle { fill: none; stroke-width: 8; }
+.ring .track { stroke: var(--card-2); }
+.ring .fill { stroke-linecap: round; transition: stroke-dashoffset 0.6s ease; }
 
-/* Inspection */
+/* Bar */
 
-.inspect-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
-  gap: 12px;
+.bar {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--card-2);
+  margin-top: 14px;
+  position: relative;
+  overflow: visible;
 }
 
-.inspect-grid .card { margin-bottom: 0; }
+.bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--gas);
+  width: 0;
+  transition: width 0.6s ease, background 0.3s;
+}
 
-.sensor-head {
+.bar-mark {
+  position: absolute;
+  top: -4px;
+  width: 2px;
+  height: 18px;
+  background: var(--bad);
+  border-radius: 2px;
+}
+
+/* State pill inside cards */
+
+.state {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 15px;
+  background: rgba(34, 197, 94, 0.14);
+  color: var(--ok);
+}
+
+.state.bad { background: rgba(239, 68, 68, 0.15); color: var(--bad); }
+.state.warn { background: rgba(245, 158, 11, 0.15); color: var(--warn); }
+
+.card.alert-on { border-color: var(--bad); box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.35), var(--shadow); }
+
+/* ---------- Chart ---------- */
+
+.chart-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 10px;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
 }
 
-.sensor-head h2 { margin: 0; }
+.chart-head h3 { margin: 0; font-size: 16px; }
 
-.badge {
-  font-size: 12px;
-  font-weight: 700;
-  padding: 4px 10px;
-  border-radius: 999px;
-  border: 1px solid currentColor;
-  white-space: nowrap;
+.seg {
+  display: inline-flex;
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--card-2);
 }
 
-.hint {
+.seg button {
+  border: 0;
+  background: transparent;
+  padding: 7px 14px;
+  border-radius: 9px;
   font-size: 13px;
+  font-weight: 600;
   color: var(--muted);
-  margin: 0 0 10px;
-  min-height: 1em;
+  cursor: pointer;
 }
 
-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.seg button.on { background: var(--card); color: var(--text); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15); }
 
-td {
-  padding: 7px 0;
-  border-top: 1px solid var(--line);
-  vertical-align: top;
+.chart-box { position: relative; height: 240px; }
+
+.foot { text-align: center; color: var(--muted); font-size: 12px; margin-top: 18px; }
+
+/* ---------- Overlays ---------- */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 7, 18, 0.65);
+  backdrop-filter: blur(4px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 50;
 }
 
-td:first-child { color: var(--muted); padding-right: 10px; }
-td:last-child { text-align: right; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.overlay.open { display: flex; }
 
-/* Forms */
-
-label.field { display: block; margin: 14px 0 6px; color: var(--muted); font-size: 14px; }
-
-input, select {
+.modal {
   width: 100%;
-  padding: 12px;
-  font-size: 16px;
-  border-radius: 10px;
+  max-width: 420px;
+  max-height: 88vh;
+  overflow: auto;
+  background: var(--card);
   border: 1px solid var(--line);
-  background: var(--panel-2);
-  color: var(--text);
+  border-radius: 24px;
+  padding: 24px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  animation: pop 0.25s ease;
 }
 
-.row { display: flex; gap: 8px; align-items: center; }
-.row input { flex: 1; }
+@keyframes pop {
+  from { transform: scale(0.92); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* Warning popup */
+
+.alarm-modal { text-align: center; border: 2px solid var(--bad); }
+
+.alarm-icon {
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  margin: 4px auto 16px;
+  display: grid;
+  place-items: center;
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--bad);
+  animation: ring 1.2s infinite;
+}
+
+@keyframes ring {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.45); }
+  60% { box-shadow: 0 0 0 18px rgba(239, 68, 68, 0); }
+}
+
+.alarm-modal h2 { margin: 0; color: var(--bad); font-size: 24px; font-weight: 800; }
+.alarm-modal p { color: var(--muted); margin: 10px 0 0; line-height: 1.5; }
 
 .btn {
+  width: 100%;
+  margin-top: 20px;
+  padding: 14px;
   border: 0;
-  border-radius: 10px;
-  padding: 12px 18px;
-  font-size: 15px;
-  font-weight: 600;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 700;
   cursor: pointer;
   background: var(--accent);
   color: #fff;
 }
 
-.btn.secondary { background: var(--panel-2); color: var(--text); border: 1px solid var(--line); }
-.btn.danger { background: transparent; color: var(--bad); border: 1px solid var(--bad); }
-.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn.red { background: var(--bad); }
+.btn.ghost { background: var(--card-2); color: var(--text); }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; }
 
-.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+/* Wi-Fi sheet */
 
-.check { display: flex; gap: 8px; align-items: center; margin-top: 10px; color: var(--muted); font-size: 14px; }
-.check input { width: auto; }
+.sheet-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.sheet-head h2 { margin: 0; font-size: 20px; }
 
-#log {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-size: 14px;
+.close {
+  border: 0;
+  background: var(--card-2);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
 }
 
-#log li { padding: 8px 0; border-top: 1px solid var(--line); }
-#log li:first-child { border-top: 0; }
-#log time { color: var(--muted); margin-right: 8px; font-variant-numeric: tabular-nums; }
+.current {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--card-2);
+  margin: 14px 0;
+}
 
-.empty {
-  text-align: center;
+.current b { display: block; }
+.current span { font-size: 13px; color: var(--muted); }
+
+.list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 600;
   color: var(--muted);
-  padding: 30px 10px;
+  margin: 6px 0 8px;
 }
 
-footer { text-align: center; padding: 20px 16px 30px; color: var(--muted); font-size: 13px; }
+.link { border: 0; background: none; color: var(--accent); font-weight: 600; cursor: pointer; padding: 4px; }
+
+.net {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 12px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.net:hover { background: var(--card-2); }
+.net.sel { border-color: var(--accent); background: var(--card-2); }
+.net .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.net .tag { font-size: 12px; color: var(--accent); font-weight: 600; }
+
+.pass-box { margin-top: 10px; }
+
+.pass-row { display: flex; gap: 8px; margin-top: 8px; }
+
+.pass-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 13px 14px;
+  font-size: 16px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--card-2);
+  color: var(--text);
+}
+
+.pass-row input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+
+.msg { margin-top: 12px; font-size: 14px; text-align: center; min-height: 20px; }
+.msg.ok { color: var(--ok); }
+.msg.bad { color: var(--bad); }
+.msg.wait { color: var(--warn); }
+
+.empty { text-align: center; color: var(--muted); padding: 22px 0; font-size: 14px; }
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--line);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  display: inline-block;
+  animation: spin 0.8s linear infinite;
+  vertical-align: middle;
+  margin-right: 8px;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Toast */
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(20px + env(safe-area-inset-bottom));
+  transform: translateX(-50%) translateY(120px);
+  background: var(--card);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  padding: 12px 18px;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 600;
+  transition: transform 0.3s ease, opacity 0.3s, visibility 0.3s;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: 60;
+  max-width: calc(100% - 32px);
+}
+
+.toast.show { transform: translateX(-50%) translateY(0); opacity: 1; visibility: visible; }
+
+/* Landscape phones: tighter cards, chart beside nothing wasted */
+@media (max-height: 500px) and (orientation: landscape) {
+  .big { font-size: 28px; }
+  .ring { width: 64px; height: 64px; }
+  .chart-box { height: 200px; }
+}
+
+@media (max-width: 420px) {
+  .grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  #gasCard { grid-column: span 2; }
+  .topbar { gap: 8px; }
+  .logo { width: 38px; height: 38px; border-radius: 12px; }
+  .brand h1 { font-size: 18px; }
+  .card { padding: 14px; }
+  .big { font-size: 28px; }
+  .ring { width: 64px; height: 64px; }
+  .brand p { display: none; }
+  .icon-btn span { display: none; }
+}
 </style>
 </head>
 
 <body>
 
-<header>
-  <div class="head-row">
-    <div>
+<!-- Reusable icons -->
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="i-flask" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 3h6M10 3v6L4.5 18.5A1.7 1.7 0 0 0 6 21h12a1.7 1.7 0 0 0 1.5-2.5L14 9V3M7 15h10"/></symbol>
+  <symbol id="i-temp" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M14 14.8V4a2 2 0 1 0-4 0v10.8a4 4 0 1 0 4 0zM12 11v6"/></symbol>
+  <symbol id="i-drop" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></symbol>
+  <symbol id="i-gas" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M3 8h11a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h8"/></symbol>
+  <symbol id="i-fire" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2.5 1.5-4 2.5-5 .3 2 1.5 3 2.5 3 0-3-1.5-5.5 0-8z"/></symbol>
+  <symbol id="i-people" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21v-1a6 6 0 0 1 12 0v1M16 3.5a4 4 0 0 1 0 7.5M22 21v-1a6 6 0 0 0-4-5.6"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2"/></symbol>
+  <symbol id="i-off" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M2 2l20 20M8.5 16.4a5 5 0 0 1 7 0M5 12.9a10 10 0 0 1 5.2-2.8M19 12.9a10 10 0 0 0-2-1.5M2 8.8a15 15 0 0 1 4.2-2.6M22 8.8A15 15 0 0 0 11 5M12 20h.01"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" d="M6 6l12 12M18 6 6 18"/></symbol>
+</svg>
+
+<div class="wrap">
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <div class="logo"><svg width="24" height="24"><use href="#i-flask"/></svg></div>
+    <div class="brand">
       <h1>SMART LAB</h1>
-      <p>Laboratory Monitoring and Safety System</p>
+      <p>Laboratory Monitoring &amp; Safety</p>
     </div>
-    <div class="pills">
-      <span class="pill" id="brokerPill">Broker: not connected</span>
-      <span class="pill" id="devicePill">Device: --</span>
+    <div class="chip waiting" id="liveChip"><span class="dot"></span><span id="liveText">Connecting</span></div>
+    <button class="icon-btn" id="wifiOpen" aria-label="Wi-Fi settings">
+      <svg width="20" height="20" viewBox="0 0 24 24" id="wifiIconTop"></svg>
+      <span id="wifiName">Wi-Fi</span>
+    </button>
+  </div>
+
+  <!-- Overall status -->
+  <div class="banner idle" id="banner">
+    <div class="banner-icon"><svg width="28" height="28" id="bannerIcon"><use href="#i-clock"/></svg></div>
+    <div>
+      <h2 id="bannerTitle">Waiting for SMART LAB</h2>
+      <p id="bannerText">Connecting to the device...</p>
     </div>
   </div>
-  <nav>
-    <button data-tab="dashboard" class="active">Dashboard</button>
-    <button data-tab="inspect">Inspection</button>
-    <button data-tab="settings">Wi-Fi &amp; Settings</button>
-  </nav>
-</header>
 
-<main>
-
-  <!-- ================= DASHBOARD ================= -->
-  <section class="tab active" id="tab-dashboard">
-
-    <div class="grid">
-      <div class="card">
-        <div class="label">Temperature</div>
-        <div class="value"><span id="temp">--</span> °C</div>
-      </div>
-      <div class="card">
-        <div class="label">Humidity</div>
-        <div class="value"><span id="hum">--</span> %</div>
-      </div>
-      <div class="card">
-        <div class="label">MQ-2 Raw Reading</div>
-        <div class="value" id="mq2">--</div>
-      </div>
-      <div class="card">
-        <div class="label">Gas / Smoke Status</div>
-        <div class="value status" id="gas">--</div>
-      </div>
-      <div class="card">
-        <div class="label">Flame Sensor</div>
-        <div class="value status" id="flame">--</div>
-      </div>
-      <div class="card">
-        <div class="label">People Inside</div>
-        <div class="value" id="people">--</div>
-      </div>
-    </div>
-
-    <div class="card alarm-card" id="alertCard">
-      <h2>Emergency Status</h2>
-      <div class="value status" id="alert">Waiting for device...</div>
-    </div>
+  <!-- Sensor cards -->
+  <div class="grid">
 
     <div class="card">
-      <h2>Temperature History</h2>
-      <div class="chart-box"><canvas id="tempChart"></canvas></div>
-    </div>
-
-    <div class="card">
-      <h2>Humidity History</h2>
-      <div class="chart-box"><canvas id="humChart"></canvas></div>
-    </div>
-
-    <div class="card">
-      <h2>System Information</h2>
-      <p class="note">
-        Data arrives from the ESP32 through the MQTT broker every two seconds.
-        Charts add one point every 10 seconds and keep the latest 100 points in this browser tab.
-        The MQ-2 value is a raw analog reading, not gas concentration.
-        The buzzer in the lab works even when the internet is down.
-      </p>
-    </div>
-  </section>
-
-  <!-- ================= INSPECTION ================= -->
-  <section class="tab" id="tab-inspect">
-    <div id="inspectEmpty" class="card empty">Waiting for data from the device...</div>
-    <div class="inspect-grid" id="inspectGrid"></div>
-  </section>
-
-  <!-- ================= SETTINGS ================= -->
-  <section class="tab" id="tab-settings">
-
-    <div class="card">
-      <h2>Connection</h2>
-      <label class="field" for="deviceId">Device ID (shown in the Serial Monitor, e.g. SL-A1B2C3)</label>
-      <input id="deviceId" placeholder="SL-XXXXXX" autocomplete="off" autocapitalize="characters">
-
-      <label class="field" for="broker">MQTT broker (must match MQTT_HOST in the firmware)</label>
-      <select id="broker">
-        <option value="wss://broker.hivemq.com:8884/mqtt">broker.hivemq.com</option>
-        <option value="wss://test.mosquitto.org:8081">test.mosquitto.org</option>
-        <option value="wss://broker.emqx.io:8084/mqtt">broker.emqx.io</option>
-      </select>
-
-      <div class="actions">
-        <button class="btn" id="connectBtn">Connect</button>
+      <div class="card-head">
+        <div class="card-icon" style="background:rgba(255,138,76,.15);color:var(--temp)"><svg width="20" height="20"><use href="#i-temp"/></svg></div>
+        <div class="card-title">Temperature</div>
+      </div>
+      <div class="gauge-row">
+        <svg class="ring" viewBox="0 0 80 80"><circle class="track" cx="40" cy="40" r="34"/><circle class="fill" id="tempRing" cx="40" cy="40" r="34" stroke="var(--temp)"/></svg>
+        <div>
+          <div class="big"><span id="temp">--</span><small>°C</small></div>
+          <div class="sub" id="tempSub">--</div>
+        </div>
       </div>
     </div>
 
     <div class="card">
-      <h2>Current Network</h2>
-      <table>
-        <tr><td>Wi-Fi name</td><td id="curSsid">--</td></tr>
-        <tr><td>Signal</td><td id="curRssi">--</td></tr>
-        <tr><td>Local IP</td><td id="curIp">--</td></tr>
-      </table>
-    </div>
-
-    <div class="card">
-      <h2>Change Wi-Fi</h2>
-      <p class="note">
-        The device tests the new network first. If it cannot connect within 20 seconds,
-        it goes back to the current network, so a typo will not take it offline.
-        The command is encrypted with your admin key before it is sent.
-      </p>
-
-      <label class="field" for="newSsid">New Wi-Fi name</label>
-      <input id="newSsid" maxlength="32" autocomplete="off">
-
-      <label class="field" for="newPass">New Wi-Fi password</label>
-      <div class="row">
-        <input id="newPass" type="password" maxlength="63" autocomplete="new-password">
-        <button class="btn secondary" id="showPass" type="button">Show</button>
+      <div class="card-head">
+        <div class="card-icon" style="background:rgba(56,189,248,.15);color:var(--hum)"><svg width="20" height="20"><use href="#i-drop"/></svg></div>
+        <div class="card-title">Humidity</div>
       </div>
-
-      <div class="actions">
-        <button class="btn" id="wifiBtn">Change Wi-Fi</button>
+      <div class="gauge-row">
+        <svg class="ring" viewBox="0 0 80 80"><circle class="track" cx="40" cy="40" r="34"/><circle class="fill" id="humRing" cx="40" cy="40" r="34" stroke="var(--hum)"/></svg>
+        <div>
+          <div class="big"><span id="hum">--</span><small>%</small></div>
+          <div class="sub" id="humSub">--</div>
+        </div>
       </div>
     </div>
 
-    <div class="card">
-      <h2>Admin Key</h2>
-      <label class="field" for="adminKey">Admin key (ADMIN_KEY in the firmware)</label>
-      <input id="adminKey" type="password" autocomplete="off">
-      <label class="check">
-        <input type="checkbox" id="rememberKey"> Remember until this tab is closed
-      </label>
+    <div class="card" id="gasCard">
+      <div class="card-head">
+        <div class="card-icon" style="background:rgba(167,139,250,.15);color:var(--gas)"><svg width="20" height="20"><use href="#i-gas"/></svg></div>
+        <div class="card-title">Gas / Smoke</div>
+      </div>
+      <div class="big" id="mq2">--</div>
+      <div class="bar"><div class="bar-fill" id="mq2Bar"></div><div class="bar-mark" id="mq2Mark"></div></div>
+      <div class="sub" id="gasSub">--</div>
+    </div>
+
+    <div class="card" id="flameCard">
+      <div class="card-head">
+        <div class="card-icon" style="background:rgba(239,68,68,.15);color:var(--bad)"><svg width="20" height="20"><use href="#i-fire"/></svg></div>
+        <div class="card-title">Flame Sensor</div>
+      </div>
+      <div class="state" id="flame">--</div>
+      <div class="sub">Infrared flame detector</div>
     </div>
 
     <div class="card">
-      <h2>Device Actions</h2>
-      <div class="actions">
-        <button class="btn secondary" id="resetBtn">Reset people counter</button>
-        <button class="btn danger" id="restartBtn">Restart device</button>
+      <div class="card-head">
+        <div class="card-icon" style="background:rgba(52,211,153,.15);color:var(--people)"><svg width="20" height="20"><use href="#i-people"/></svg></div>
+        <div class="card-title">People Inside</div>
+      </div>
+      <div class="big" id="people">--</div>
+      <div class="sub">Counted at the door</div>
+    </div>
+
+  </div>
+
+  <!-- History chart -->
+  <div class="card">
+    <div class="chart-head">
+      <h3>History</h3>
+      <div class="seg" id="chartSeg">
+        <button class="on" data-series="temp">Temperature</button>
+        <button data-series="hum">Humidity</button>
+      </div>
+    </div>
+    <div class="chart-box"><canvas id="chart"></canvas></div>
+  </div>
+
+  <div class="foot">Live data every 2 s · Chart adds a point every 10 s · MQ-2 shows a raw reading, not gas concentration</div>
+</div>
+
+<!-- Warning popup -->
+<div class="overlay" id="alarmOverlay" role="alertdialog" aria-modal="true" aria-labelledby="alarmTitle">
+  <div class="modal alarm-modal">
+    <div class="alarm-icon"><svg width="40" height="40" id="alarmIcon"><use href="#i-alert"/></svg></div>
+    <h2 id="alarmTitle">Warning</h2>
+    <p id="alarmText">--</p>
+    <p id="alarmTime" style="font-size:13px"></p>
+    <button class="btn red" id="alarmOk">OK, I understand</button>
+  </div>
+</div>
+
+<!-- Wi-Fi sheet -->
+<div class="overlay" id="wifiOverlay" role="dialog" aria-modal="true" aria-labelledby="wifiTitle">
+  <div class="modal">
+    <div class="sheet-head">
+      <h2 id="wifiTitle">Wi-Fi</h2>
+      <button class="close" id="wifiClose" aria-label="Close"><svg width="18" height="18"><use href="#i-x"/></svg></button>
+    </div>
+
+    <div class="current">
+      <svg width="26" height="26" viewBox="0 0 24 24" id="wifiIconCur"></svg>
+      <div>
+        <b id="curSsid">--</b>
+        <span id="curSignal">Current network</span>
       </div>
     </div>
 
-    <div class="card">
-      <h2>Command Log</h2>
-      <ul id="log"><li class="note">No commands sent yet.</li></ul>
+    <div class="list-head">
+      <span>Networks the ESP32 can see</span>
+      <button class="link" id="scanBtn">Scan again</button>
     </div>
-  </section>
 
-</main>
+    <div id="netList"><div class="empty">Tap "Scan again" to search.</div></div>
 
-<footer>SMART LAB | ESP32 + MQTT Online Dashboard</footer>
+    <div class="pass-box" id="passBox" hidden>
+      <div class="pass-row">
+        <input id="pass" type="password" placeholder="Password" maxlength="63" autocomplete="off">
+        <button class="close" id="showPass" aria-label="Show password" style="width:48px;height:auto;border-radius:12px">
+          <svg width="18" height="18"><use href="#i-lock"/></svg>
+        </button>
+      </div>
+      <button class="btn" id="joinBtn">Connect</button>
+    </div>
+
+    <div class="msg" id="wifiMsg"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
 
 <script>
 'use strict';
+
+// =====================================================
+// SETTINGS (must match the firmware)
+// =====================================================
+
+const BROKER = 'wss://broker.hivemq.com:8884/mqtt';
+const TOPIC = 'smartlab/afkar3374-lab1';
 
 // =====================================================
 // HELPERS
 // =====================================================
 
 const $ = id => document.getElementById(id);
+const RING = 2 * Math.PI * 34;
 
-function store(kind, key, value) {
-  try {
-    const s = kind === 'session' ? sessionStorage : localStorage;
-    if (value === undefined) return s.getItem(key);
-    if (value === null) s.removeItem(key); else s.setItem(key, value);
-  } catch (e) {
-    return null;
-  }
-}
-
-function esc(v) {
-  return String(v).replace(/[&<>"']/g, c => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-  }[c]));
-}
-
-function fmt(v, digits) {
-  if (v === null || v === undefined) return '--';
-  return digits === undefined ? String(v) : Number(v).toFixed(digits);
-}
-
-function duration(sec) {
-  if (sec === null || sec === undefined) return 'never';
-  if (sec < 60) return sec + ' s';
-  if (sec < 3600) return Math.floor(sec / 60) + ' min ' + (sec % 60) + ' s';
-  if (sec < 86400) return Math.floor(sec / 3600) + ' h ' + Math.floor(sec % 3600 / 60) + ' min';
-  return Math.floor(sec / 86400) + ' d ' + Math.floor(sec % 86400 / 3600) + ' h';
-}
-
-function setPill(el, cls, text) {
-  el.className = 'pill ' + cls;
-  el.textContent = text;
-}
-
-function b64(bytes) {
-  let s = '';
-  bytes.forEach(b => s += String.fromCharCode(b));
-  return btoa(s);
-}
-
-// =====================================================
-// TABS
-// =====================================================
-
-document.querySelectorAll('nav button').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b === btn));
-    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.id === 'tab-' + btn.dataset.tab));
-    store('local', 'sl-tab', btn.dataset.tab);
-  });
+['tempRing', 'humRing'].forEach(id => {
+  $(id).style.strokeDasharray = RING;
+  $(id).style.strokeDashoffset = RING;
 });
 
-const savedTab = store('local', 'sl-tab');
-if (savedTab) {
-  const btn = document.querySelector('nav button[data-tab="' + savedTab + '"]');
-  if (btn) btn.click();
+function setRing(id, fraction) {
+  const f = Math.max(0, Math.min(1, fraction));
+  $(id).style.strokeDashoffset = RING * (1 - f);
 }
 
+function signalBars(rssi) {
+  if (rssi >= -60) return 4;
+  if (rssi >= -70) return 3;
+  if (rssi >= -80) return 2;
+  return 1;
+}
+
+// Wi-Fi icon with 1-4 filled arcs.
+function wifiSvg(el, bars) {
+  const arcs = [
+    'M12 20h.01',
+    'M8.5 16.4a5 5 0 0 1 7 0',
+    'M5 12.9a10 10 0 0 1 14 0',
+    'M2 8.8a15 15 0 0 1 20 0'
+  ];
+  el.innerHTML = arcs.map((d, i) =>
+    '<path d="' + d + '" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" opacity="' +
+    (i < bars ? 1 : 0.25) + '"/>').join('');
+}
+
+function toast(text) {
+  const t = $('toast');
+  t.textContent = text;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+wifiSvg($('wifiIconTop'), 0);
+wifiSvg($('wifiIconCur'), 0);
+
 // =====================================================
-// CHARTS
+// CHART
 // =====================================================
 
-const chartsOK = typeof Chart !== 'undefined';
-
-let labels = [];
-let temperatures = [];
-let humidities = [];
+const hist = { labels: [], temp: [], hum: [] };
+let series = 'temp';
 let lastChartTime = 0;
+let chart = null;
 
-function makeChart(canvasId, label, data, color) {
-  if (!chartsOK) {
-    $(canvasId).parentElement.innerHTML = '<p class="note">Chart library could not load.</p>';
-    return null;
-  }
-
+if (typeof Chart !== 'undefined') {
   const css = getComputedStyle(document.documentElement);
   const muted = css.getPropertyValue('--muted').trim();
-  const grid = css.getPropertyValue('--chart-grid').trim();
+  const line = css.getPropertyValue('--line').trim();
 
-  return new Chart($(canvasId), {
+  chart = new Chart($('chart'), {
     type: 'line',
     data: {
-      labels: labels,
+      labels: hist.labels,
       datasets: [{
-        label: label,
-        data: data,
-        borderColor: color,
-        backgroundColor: color + '26',
+        label: 'Temperature (°C)',
+        data: hist.temp,
+        borderColor: '#ff8a4c',
+        backgroundColor: 'rgba(255,138,76,0.15)',
         fill: true,
-        tension: 0.25,
-        pointRadius: 0,
-        borderWidth: 2
+        tension: 0.35,
+        pointRadius: () => (hist.labels.length < 3 ? 4 : 0),
+        pointBackgroundColor: ctx => ctx.dataset.borderColor,
+        borderWidth: 2.5
       }]
     },
     options: {
@@ -544,467 +780,388 @@ function makeChart(canvasId, label, data, color) {
       maintainAspectRatio: false,
       animation: false,
       interaction: { mode: 'index', intersect: false },
-      plugins: { legend: { labels: { color: muted } } },
+      plugins: { legend: { display: false } },
       scales: {
-        x: { ticks: { color: muted, maxTicksLimit: 6 }, grid: { color: grid } },
-        y: { ticks: { color: muted }, grid: { color: grid } }
+        x: { ticks: { color: muted, maxTicksLimit: 6 }, grid: { display: false } },
+        y: { ticks: { color: muted }, grid: { color: line } }
       }
     }
   });
+} else {
+  $('chart').parentElement.innerHTML = '<div class="empty">Chart could not load.</div>';
 }
 
-const tempChart = makeChart('tempChart', 'Temperature (°C)', temperatures, '#3b82f6');
-const humChart = makeChart('humChart', 'Humidity (%)', humidities, '#06b6d4');
+$('chartSeg').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b || !chart) return;
+  series = b.dataset.series;
+  document.querySelectorAll('#chartSeg button').forEach(x => x.classList.toggle('on', x === b));
+
+  const ds = chart.data.datasets[0];
+  ds.data = hist[series];
+  ds.label = series === 'temp' ? 'Temperature (°C)' : 'Humidity (%)';
+  ds.borderColor = series === 'temp' ? '#ff8a4c' : '#38bdf8';
+  ds.backgroundColor = series === 'temp' ? 'rgba(255,138,76,0.15)' : 'rgba(56,189,248,0.15)';
+  chart.update();
+});
 
 // =====================================================
-// MQTT CONNECTION
+// WARNING POPUP
+// =====================================================
+
+let lastAlarm = false;
+let dismissedAlert = '';
+
+function beep() {
+  try {
+    const ctx = new AudioContext();
+    [0, 0.35, 0.7].forEach(t => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g);
+      g.connect(ctx.destination);
+      o.frequency.value = 880;
+      g.gain.value = 0.15;
+      o.start(ctx.currentTime + t);
+      o.stop(ctx.currentTime + t + 0.2);
+    });
+    setTimeout(() => ctx.close(), 1200);
+  } catch (e) { /* audio blocked until the page is tapped */ }
+}
+
+function showAlarm(d) {
+  const flame = d.flame;
+  $('alarmTitle').textContent = flame && d.gas ? 'Fire & Gas Alert!' : flame ? 'Flame Detected!' : 'Gas / Smoke Alert!';
+  $('alarmText').textContent = (flame ? 'The flame sensor has been triggered. ' : '') +
+    (d.gas ? 'Gas/smoke level is above the safe limit (' + d.mq2Raw + ' / ' + d.mq2Threshold + '). ' : '') +
+    'Check the lab immediately. The buzzer is sounding.';
+  $('alarmTime').textContent = 'Detected at ' + new Date().toLocaleTimeString();
+  $('alarmOverlay').classList.add('open');
+  beep();
+  if (navigator.vibrate) navigator.vibrate([400, 200, 400]);
+}
+
+$('alarmOk').addEventListener('click', () => {
+  $('alarmOverlay').classList.remove('open');
+  dismissedAlert = state ? state.alert : '';
+});
+
+// =====================================================
+// DASHBOARD
+// =====================================================
+
+let state = null;
+let stateAt = 0;
+let deviceStatus = '';
+
+function render() {
+  const d = state;
+
+  // Temperature
+  $('temp').textContent = d.temperature === null ? '--' : d.temperature.toFixed(1);
+  setRing('tempRing', d.temperature === null ? 0 : d.temperature / 50);
+  $('tempSub').textContent = d.temperature === null ? 'Sensor error'
+    : d.temperature < 18 ? 'Cool' : d.temperature <= 30 ? 'Normal' : d.temperature <= 38 ? 'Warm' : 'Hot';
+
+  // Humidity
+  $('hum').textContent = d.humidity === null ? '--' : d.humidity.toFixed(1);
+  setRing('humRing', d.humidity === null ? 0 : d.humidity / 100);
+  $('humSub').textContent = d.humidity === null ? 'Sensor error'
+    : d.humidity < 30 ? 'Dry' : d.humidity <= 60 ? 'Comfortable' : 'Humid';
+
+  // Gas
+  const max = d.mq2Threshold * 1.5;
+  $('mq2').textContent = d.mq2Raw;
+  $('mq2Bar').style.width = Math.min(100, 100 * d.mq2Raw / max) + '%';
+  $('mq2Bar').style.background = d.gas ? 'var(--bad)' : d.mq2Raw > d.mq2Threshold * 0.8 ? 'var(--warn)' : 'var(--gas)';
+  $('mq2Mark').style.left = (100 * d.mq2Threshold / max) + '%';
+  $('gasSub').textContent = d.warmingUp ? 'Warming up...' : d.gas ? 'ABOVE LIMIT' : 'MQ-2 normal · limit ' + d.mq2Threshold;
+  $('gasSub').style.color = d.gas ? 'var(--bad)' : d.warmingUp ? 'var(--warn)' : '';
+  $('gasCard').classList.toggle('alert-on', d.gas);
+
+  // Flame
+  $('flame').innerHTML = '';
+  $('flame').className = 'state' + (d.flame ? ' bad' : '');
+  $('flame').insertAdjacentHTML('beforeend',
+    '<svg width="16" height="16"><use href="#' + (d.flame ? 'i-alert' : 'i-check') + '"/></svg>');
+  $('flame').append(d.flame ? 'FLAME!' : 'No flame');
+  $('flameCard').classList.toggle('alert-on', d.flame);
+
+  // People
+  $('people').textContent = d.people;
+
+  // Banner
+  const banner = $('banner');
+  banner.className = 'banner ' + (d.alarm ? 'bad' : d.warmingUp ? 'warn' : '');
+  $('bannerIcon').innerHTML = '<use href="#' + (d.alarm ? 'i-alert' : d.warmingUp ? 'i-clock' : 'i-check') + '"/>';
+  $('bannerTitle').textContent = d.alarm ? 'Emergency!' : d.warmingUp ? 'Starting up' : 'All Clear';
+  $('bannerText').textContent = d.alarm || d.warmingUp ? d.alert
+    : 'All sensors are normal · ' + d.people + (d.people === 1 ? ' person' : ' people') + ' inside';
+
+  // Wi-Fi
+  const bars = signalBars(d.rssi);
+  wifiSvg($('wifiIconTop'), bars);
+  wifiSvg($('wifiIconCur'), bars);
+  $('wifiName').textContent = d.ssid || 'Wi-Fi';
+  $('curSsid').textContent = d.ssid || '--';
+  $('curSignal').textContent = 'Connected · ' + ['', 'Weak', 'Fair', 'Good', 'Excellent'][bars] + ' signal (' + d.rssi + ' dBm)';
+
+  // Popup: new alarm, or a different alarm than the one dismissed
+  if (d.alarm && (!lastAlarm || (d.alert !== dismissedAlert && !$('alarmOverlay').classList.contains('open')))) {
+    showAlarm(d);
+  }
+  if (!d.alarm && lastAlarm) {
+    $('alarmOverlay').classList.remove('open');
+    dismissedAlert = '';
+    toast('Alarm cleared. Lab is safe.');
+  }
+  lastAlarm = d.alarm;
+
+  // Chart: one point every 10 s, keep 100
+  const now = Date.now();
+  if (chart && now - lastChartTime >= 10000 && d.temperature !== null && d.humidity !== null) {
+    lastChartTime = now;
+    hist.labels.push(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+    hist.temp.push(d.temperature);
+    hist.hum.push(d.humidity);
+    if (hist.labels.length > 100) {
+      hist.labels.shift();
+      hist.temp.shift();
+      hist.hum.shift();
+    }
+    chart.update();
+  }
+
+  updateLive();
+}
+
+function updateLive() {
+  const chip = $('liveChip');
+  const stale = Date.now() - stateAt > 10000;
+
+  if (!client || !client.connected) {
+    chip.className = 'chip waiting';
+    $('liveText').textContent = 'Connecting';
+  } else if (deviceStatus === 'offline' || (state && stale)) {
+    chip.className = 'chip offline';
+    $('liveText').textContent = 'Device offline';
+    if (state) {
+      $('banner').className = 'banner idle';
+      $('bannerIcon').innerHTML = '<use href="#i-off"/>';
+      $('bannerTitle').textContent = 'Device offline';
+      $('bannerText').textContent = 'Showing the last readings received.';
+    }
+  } else if (!state) {
+    chip.className = 'chip waiting';
+    $('liveText').textContent = 'Waiting';
+  } else {
+    chip.className = 'chip live';
+    $('liveText').textContent = 'Live';
+  }
+}
+
+setInterval(updateLive, 1000);
+
+// =====================================================
+// MQTT
 // =====================================================
 
 let client = null;
-let deviceId = '';
-let state = null;
-let stateReceivedAt = 0;
-let deviceStatus = 'unknown';
-let lastAlarm = false;
 
-const topic = name => 'smartlab/' + deviceId + '/' + name;
-
-$('deviceId').value = store('local', 'sl-device') || '';
-$('broker').value = store('local', 'sl-broker') || $('broker').value;
-
-if (store('session', 'sl-key')) {
-  $('adminKey').value = store('session', 'sl-key');
-  $('rememberKey').checked = true;
-}
-
-function connect() {
-
-  deviceId = $('deviceId').value.trim().toUpperCase();
-  $('deviceId').value = deviceId;
-
-  if (!deviceId) {
-    setPill($('devicePill'), 'warn', 'Device: enter ID in Settings');
-    document.querySelector('nav button[data-tab="settings"]').click();
-    $('deviceId').focus();
-    return;
-  }
-
-  if (typeof mqtt === 'undefined') {
-    setPill($('brokerPill'), 'bad', 'MQTT library failed to load');
-    return;
-  }
-
-  store('local', 'sl-device', deviceId);
-  store('local', 'sl-broker', $('broker').value);
-
-  if (client) client.end(true);
-
-  state = null;
-  deviceStatus = 'unknown';
-  labels.length = temperatures.length = humidities.length = 0;
-  if (tempChart) { tempChart.update(); humChart.update(); }
-
-  setPill($('brokerPill'), 'warn', 'Broker: connecting...');
-  setPill($('devicePill'), '', 'Device: ' + deviceId);
-
-  client = mqtt.connect($('broker').value, {
-    clientId: 'slweb-' + Math.random().toString(16).slice(2, 10),
+if (typeof mqtt === 'undefined') {
+  $('liveText').textContent = 'No connection';
+  $('bannerText').textContent = 'Could not load the MQTT library. Check your internet.';
+} else {
+  client = mqtt.connect(BROKER, {
+    clientId: 'smartlab-web-' + Math.random().toString(16).slice(2, 10),
     clean: true,
     reconnectPeriod: 3000,
     connectTimeout: 10000
   });
 
   client.on('connect', () => {
-    setPill($('brokerPill'), 'ok', 'Broker: connected');
-    client.subscribe(topic('#'), { qos: 1 });
+    client.subscribe(TOPIC + '/#');
+    updateLive();
+    // Wi-Fi panel opened before the broker connected: scan now.
+    if (scanWanted) scan();
   });
 
-  client.on('reconnect', () => setPill($('brokerPill'), 'warn', 'Broker: reconnecting...'));
-  client.on('offline', () => setPill($('brokerPill'), 'bad', 'Broker: offline'));
-  client.on('error', () => setPill($('brokerPill'), 'bad', 'Broker: error'));
+  client.on('close', updateLive);
 
-  client.on('message', (t, payload) => {
-    const text = payload.toString();
+  client.on('message', (topic, payload) => {
+    let data;
+    try { data = JSON.parse(payload.toString()); } catch (e) { data = payload.toString(); }
 
-    if (t === topic('state')) {
-      try {
-        state = JSON.parse(text);
-        stateReceivedAt = Date.now();
-        render();
-      } catch (e) { /* ignore malformed */ }
-
-    } else if (t === topic('status')) {
-      deviceStatus = text;
-      updateDevicePill();
-
-    } else if (t === topic('ack')) {
-      try { handleAck(JSON.parse(text)); } catch (e) { /* ignore */ }
+    if (topic === TOPIC + '/state') {
+      state = data;
+      stateAt = Date.now();
+      render();
+    } else if (topic === TOPIC + '/status') {
+      deviceStatus = data;
+      updateLive();
+    } else if (topic === TOPIC + '/wifi') {
+      renderNetworks(data);
+    } else if (topic === TOPIC + '/ack') {
+      handleAck(data);
     }
   });
 }
 
-$('connectBtn').addEventListener('click', connect);
+function send(cmd) {
+  if (!client || !client.connected) {
+    toast('Not connected to the internet broker');
+    return false;
+  }
+  client.publish(TOPIC + '/cmd', JSON.stringify(cmd));
+  return true;
+}
 
-function updateDevicePill() {
-  const age = (Date.now() - stateReceivedAt) / 1000;
-  const pill = $('devicePill');
+// =====================================================
+// WI-FI
+// =====================================================
 
-  if (deviceStatus === 'offline') {
-    setPill(pill, 'bad', deviceId + ': offline');
-  } else if (!state) {
-    setPill(pill, 'warn', deviceId + ': waiting for data');
-  } else if (age > 10) {
-    setPill(pill, 'warn', deviceId + ': no data for ' + duration(Math.round(age)));
-  } else {
-    setPill(pill, 'ok', deviceId + ': live');
+let selected = null;
+let scanWanted = false;
+let joining = false;
+let joinTimer = null;
+
+function setMsg(text, cls) {
+  const m = $('wifiMsg');
+  m.className = 'msg ' + (cls || '');
+  m.innerHTML = cls === 'wait' ? '<span class="spinner"></span>' : '';
+  m.append(text);
+}
+
+$('wifiOpen').addEventListener('click', () => {
+  $('wifiOverlay').classList.add('open');
+  if (!joining) scan();
+});
+
+$('wifiClose').addEventListener('click', () => $('wifiOverlay').classList.remove('open'));
+
+$('wifiOverlay').addEventListener('click', e => {
+  if (e.target === $('wifiOverlay')) $('wifiOverlay').classList.remove('open');
+});
+
+$('scanBtn').addEventListener('click', scan);
+
+function scan() {
+  if (!client || !client.connected) {
+    scanWanted = true;
+    $('netList').innerHTML = '<div class="empty"><span class="spinner"></span>Connecting...</div>';
+    return;
+  }
+  scanWanted = false;
+  if (send({ action: 'scan' })) {
+    $('netList').innerHTML = '<div class="empty"><span class="spinner"></span>Searching for networks...</div>';
   }
 }
 
-setInterval(updateDevicePill, 1000);
-
-// =====================================================
-// DASHBOARD
-// =====================================================
-
-function playBrowserAlarm() {
-  try {
-    const audio = new AudioContext();
-    const oscillator = audio.createOscillator();
-    const gain = audio.createGain();
-    oscillator.connect(gain);
-    gain.connect(audio.destination);
-    oscillator.frequency.value = 880;
-    gain.gain.value = 0.12;
-    oscillator.start();
-    setTimeout(() => { oscillator.stop(); audio.close(); }, 700);
-  } catch (e) {
-    console.log('Browser audio unavailable');
-  }
-}
-
-function setStatus(el, text, cls) {
-  el.textContent = text;
-  el.className = 'value status ' + cls;
-}
-
-function render() {
-  const d = state;
-
-  $('temp').textContent = fmt(d.temperature, 1);
-  $('hum').textContent = fmt(d.humidity, 1);
-  $('mq2').textContent = fmt(d.mq2Raw);
-  $('people').textContent = fmt(d.people);
-
-  const warming = d.sensors && d.sensors.mq2.warmingUp;
-  setStatus($('gas'), d.gas ? 'ALERT' : warming ? 'Warming up' : 'No trigger',
-            d.gas ? 'bad' : warming ? 'warn' : 'ok');
-  setStatus($('flame'), d.flame ? 'FLAME ALERT' : 'No trigger', d.flame ? 'bad' : 'ok');
-  setStatus($('alert'), d.alert, d.alarm ? 'bad' : warming ? 'warn' : 'ok');
-  $('alertCard').classList.toggle('bad', !!d.alarm);
-
-  // Add a graph sample every 10 seconds.
-  const now = Date.now();
-  if (now - lastChartTime >= 10000 && d.temperature !== null && d.humidity !== null) {
-    lastChartTime = now;
-    labels.push(new Date().toLocaleTimeString());
-    temperatures.push(d.temperature);
-    humidities.push(d.humidity);
-
-    if (labels.length > 100) {
-      labels.shift();
-      temperatures.shift();
-      humidities.shift();
-    }
-
-    if (tempChart) { tempChart.update(); humChart.update(); }
-  }
-
-  // Beep once when a new alarm starts.
-  if (d.alarm && !lastAlarm) playBrowserAlarm();
-  lastAlarm = d.alarm;
-
-  if (d.sensors) renderInspection(d);
-
-  if (d.system) {
-    $('curSsid').textContent = d.system.ssid || '--';
-    $('curRssi').textContent = d.system.rssi + ' dBm (' + signalQuality(d.system.rssi)[0] + ')';
-    $('curIp').textContent = d.system.ip;
-  }
-
-  updateDevicePill();
-}
-
-// =====================================================
-// INSPECTION
-// =====================================================
-
-// How long each IR beam has been blocked (tracked in the browser).
-const irBlockedSince = { a: 0, b: 0 };
-
-function signalQuality(rssi) {
-  if (rssi >= -60) return ['Excellent', 'ok'];
-  if (rssi >= -70) return ['Good', 'ok'];
-  if (rssi >= -80) return ['Weak', 'warn'];
-  return ['Very weak', 'bad'];
-}
-
-function levelName(level) {
-  return level ? 'HIGH (1)' : 'LOW (0)';
-}
-
-function panel(title, health, hint, rows) {
-  const [label, cls] = health;
-  return '<div class="card">' +
-    '<div class="sensor-head"><h2>' + esc(title) + '</h2>' +
-    '<span class="badge ' + cls + '">' + esc(label) + '</span></div>' +
-    '<p class="hint">' + esc(hint) + '</p>' +
-    '<table>' + rows.map(r => '<tr><td>' + esc(r[0]) + '</td><td>' + esc(r[1]) + '</td></tr>').join('') +
-    '</table></div>';
-}
-
-function renderInspection(d) {
-  const s = d.sensors;
-  const sys = d.system;
-  const now = Date.now();
-  const html = [];
-
-  // DHT22
-  const dh = s.dht22;
-  html.push(panel('DHT22 · Temp & Humidity',
-    dh.ok ? ['OK', 'ok'] : ['FAULT', 'bad'],
-    dh.ok ? 'Sensor responding normally.'
-          : 'No valid reading. Check wiring, 3.3 V supply and the 10 kΩ pull-up on the data pin.',
-    [
-      ['GPIO', dh.pin],
-      ['Temperature', fmt(dh.temperature, 1) + ' °C'],
-      ['Humidity', fmt(dh.humidity, 1) + ' %'],
-      ['Heat index', fmt(dh.heatIndex, 1) + ' °C'],
-      ['Good reads', dh.goodReads],
-      ['Read errors', dh.errors + (dh.goodReads + dh.errors ? ' (' +
-        (100 * dh.errors / (dh.goodReads + dh.errors)).toFixed(1) + '%)' : '')],
-      ['Last good read', dh.lastOkAgo === null ? 'never' : duration(dh.lastOkAgo) + ' ago']
-    ]));
-
-  // MQ-2
-  const m = s.mq2;
-  let mqHealth = ['OK', 'ok'];
-  let mqHint = 'Reading below the alarm threshold.';
-  if (m.warmingUp) {
-    mqHealth = ['WARMING UP', 'warn'];
-    mqHint = 'Heater warming up. Gas alarm starts in ' + duration(m.warmupLeft) + '.';
-  } else if (m.triggered) {
-    mqHealth = ['ALERT', 'bad'];
-    mqHint = 'Reading is above the threshold. Ventilate and check the lab.';
-  } else if (m.raw <= 5) {
-    mqHealth = ['CHECK', 'warn'];
-    mqHint = 'Reading is near zero. The AO wire may be disconnected.';
-  } else if (m.raw >= 4090) {
-    mqHealth = ['CHECK', 'warn'];
-    mqHint = 'ADC is saturated. Check the voltage divider on AO (max 3.3 V into GPIO34).';
-  }
-  html.push(panel('MQ-2 · Gas / Smoke', mqHealth, mqHint, [
-    ['GPIO', m.pin + ' (ADC1)'],
-    ['Raw reading', m.raw + ' / 4095'],
-    ['Voltage at pin', m.mV + ' mV'],
-    ['Alarm threshold', m.threshold + ' (clears below ' + (m.threshold - m.hysteresis) + ')'],
-    ['Level vs threshold', Math.round(100 * m.raw / m.threshold) + ' %'],
-    ['Min / max since warm-up', fmt(m.min) + ' / ' + fmt(m.max)],
-    ['Warm-up left', m.warmingUp ? duration(m.warmupLeft) : 'done']
-  ]));
-
-  // Flame
-  const f = s.flame;
-  html.push(panel('Flame Sensor', f.detected ? ['ALERT', 'bad'] : ['OK', 'ok'],
-    f.detected ? 'Flame detected. The buzzer is sounding.' : 'No flame detected.',
-    [
-      ['GPIO', f.pin],
-      ['Pin level now', levelName(f.level)],
-      ['Active when', levelName(f.activeLevel)],
-      ['Detected', f.detected ? 'YES' : 'No'],
-      ['Times triggered', f.triggers],
-      ['Last trigger', f.lastTriggerAgo === null ? 'never' : duration(f.lastTriggerAgo) + ' ago']
-    ]));
-
-  // IR door sensors
-  const ir = s.ir;
-  irBlockedSince.a = ir.a ? (irBlockedSince.a || now) : 0;
-  irBlockedSince.b = ir.b ? (irBlockedSince.b || now) : 0;
-  const stuck = ['a', 'b'].filter(k => irBlockedSince[k] && now - irBlockedSince[k] > 15000);
-  html.push(panel('IR People Counter',
-    stuck.length ? ['CHECK', 'warn'] : ['OK', 'ok'],
-    stuck.length ? 'Sensor ' + stuck.join(' & ').toUpperCase() +
-                   ' blocked for over 15 s. Check for an obstacle or adjust the sensitivity screw.'
-                 : 'A then B counts an entry, B then A counts an exit.',
-    [
-      ['GPIO A / B', ir.pinA + ' / ' + ir.pinB],
-      ['Sensor A', (ir.a ? 'BLOCKED' : 'clear') + ' · ' + levelName(ir.levelA)],
-      ['Sensor B', (ir.b ? 'BLOCKED' : 'clear') + ' · ' + levelName(ir.levelB)],
-      ['Counter state', ir.door],
-      ['People inside', d.people],
-      ['Entries / exits', ir.entries + ' / ' + ir.exits]
-    ]));
-
-  // Buzzer
-  const bz = s.buzzer;
-  html.push(panel('Buzzer', bz.on ? ['SOUNDING', 'bad'] : ['SILENT', 'ok'],
-    'Sounds whenever gas or flame is detected. Works without internet.',
-    [
-      ['GPIO', bz.pin],
-      ['Output', bz.on ? 'ON' : 'off'],
-      ['Alarms since boot', bz.alarms]
-    ]));
-
-  // System
-  const sig = signalQuality(sys.rssi);
-  const brownout = sys.reset.indexOf('Brownout') === 0;
-  const lowHeap = sys.minHeap < 30000;
-  html.push(panel('ESP32 System',
-    brownout || sig[1] === 'bad' || lowHeap ? ['CHECK', 'warn'] : ['OK', 'ok'],
-    brownout ? 'Last reset was a brownout. Use a stronger 5 V supply.'
-             : sig[1] === 'bad' ? 'Wi-Fi signal is very weak. Move the ESP32 closer to the router.'
-             : lowHeap ? 'Free memory dropped low at some point.'
-             : 'Running normally.',
-    [
-      ['Chip', sys.chip + ' @ ' + sys.cpuMHz + ' MHz'],
-      ['Firmware', d.v],
-      ['Uptime', duration(d.uptime)],
-      ['Last reset', sys.reset],
-      ['Wi-Fi', sys.ssid],
-      ['Signal', sys.rssi + ' dBm (' + sig[0] + ')'],
-      ['IP / MAC', sys.ip + ' / ' + sys.mac],
-      ['Free memory', Math.round(sys.heap / 1024) + ' KB (lowest ' + Math.round(sys.minHeap / 1024) + ' KB)'],
-      ['MQTT broker', sys.broker],
-      ['Reconnects Wi-Fi / MQTT', sys.wifiReconnects + ' / ' + sys.mqttReconnects]
-    ]));
-
-  $('inspectEmpty').style.display = 'none';
-  $('inspectGrid').innerHTML = html.join('');
-}
-
-// =====================================================
-// SECURE COMMANDS
-// =====================================================
-
-// Key = SHA-256(adminKey + ":" + deviceId), same as the firmware.
-async function deriveKey(adminKey) {
-  const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(adminKey + ':' + deviceId));
-  return crypto.subtle.importKey('raw', hash, 'AES-GCM', false, ['encrypt']);
-}
-
-let pending = null;   // { id, action, timer }
-
-function log(text, cls) {
-  const ul = $('log');
-  if (ul.querySelector('.note')) ul.innerHTML = '';
-  const li = document.createElement('li');
-  li.innerHTML = '<time>' + new Date().toLocaleTimeString() + '</time>';
-  const span = document.createElement('span');
-  span.textContent = text;
-  if (cls) span.className = cls;
-  li.appendChild(span);
-  ul.prepend(li);
-}
-
-function setBusy(busy) {
-  ['wifiBtn', 'resetBtn', 'restartBtn'].forEach(id => $(id).disabled = busy);
-}
-
-async function sendCommand(action, extra, timeoutMs) {
-
-  if (pending) return;
-
-  if (!client || !client.connected) { log('Not connected to the broker.', 'bad'); return; }
-  if (!state || !state.nonce) { log('No data from the device yet. Is it online?', 'bad'); return; }
-  if (!window.crypto || !crypto.subtle) { log('This browser cannot encrypt. Open the page over https.', 'bad'); return; }
-
-  const adminKey = $('adminKey').value;
-  if (!adminKey) { log('Enter the admin key first.', 'warn'); $('adminKey').focus(); return; }
-
-  store('session', 'sl-key', $('rememberKey').checked ? adminKey : null);
-
-  const id = Math.random().toString(36).slice(2, 10);
-  const body = JSON.stringify(Object.assign({ nonce: state.nonce, id: id, action: action }, extra));
-
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const key = await deriveKey(adminKey);
-  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, key,
-                                                        new TextEncoder().encode(body)));
-
-  pending = {
-    id: id,
-    action: action,
-    timer: setTimeout(() => {
-      log('No reply from the device. Check that it is online.', 'warn');
-      pending = null;
-      setBusy(false);
-    }, timeoutMs)
-  };
-
-  setBusy(true);
-  client.publish(topic('cmd'), JSON.stringify({ iv: b64(iv), ct: b64(ct) }), { qos: 1 });
-}
-
-function handleAck(ack) {
-
-  // Wrong key / bad format replies cannot carry our id (device could not decrypt it).
-  if (!pending || (ack.id && ack.id !== pending.id)) return;
-
-  log(ack.msg, ack.ok ? (ack.stage === 'testing' ? 'warn' : 'ok') : 'bad');
-
-  if (ack.stage === 'testing') {
-    log('Device is switching networks. This can take up to 45 seconds...', 'warn');
+function renderNetworks(data) {
+  if (!data || data.scanning) {
+    $('netList').innerHTML = '<div class="empty"><span class="spinner"></span>Searching for networks...</div>';
     return;
   }
 
-  clearTimeout(pending.timer);
+  const list = $('netList');
+  list.innerHTML = '';
 
-  if (pending.action === 'wifi' && ack.ok) {
-    $('newSsid').value = '';
-    $('newPass').value = '';
+  if (!data.networks || !data.networks.length) {
+    list.innerHTML = '<div class="empty">No networks found. Try again.</div>';
+    return;
   }
 
-  pending = null;
-  setBusy(false);
+  data.networks.forEach(n => {
+    const b = document.createElement('button');
+    b.className = 'net' + (selected && selected.ssid === n.ssid ? ' sel' : '');
+
+    const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    icon.setAttribute('width', '22');
+    icon.setAttribute('height', '22');
+    icon.setAttribute('viewBox', '0 0 24 24');
+    wifiSvg(icon, signalBars(n.rssi));
+
+    const name = document.createElement('span');
+    name.className = 'name';
+    name.textContent = n.ssid;
+
+    b.append(icon, name);
+
+    if (state && n.ssid === state.ssid) {
+      const tag = document.createElement('span');
+      tag.className = 'tag';
+      tag.textContent = 'Connected';
+      b.append(tag);
+    } else if (!n.open) {
+      b.insertAdjacentHTML('beforeend', '<svg width="16" height="16" style="color:var(--muted)"><use href="#i-lock"/></svg>');
+    }
+
+    b.addEventListener('click', () => {
+      selected = n;
+      document.querySelectorAll('.net').forEach(x => x.classList.toggle('sel', x === b));
+      $('passBox').hidden = false;
+      $('pass').value = '';
+      $('pass').hidden = n.open;
+      $('showPass').hidden = n.open;
+      $('joinBtn').textContent = 'Connect to ' + n.ssid;
+      setMsg('');
+      if (!n.open) $('pass').focus();
+    });
+
+    list.append(b);
+  });
 }
 
-$('wifiBtn').addEventListener('click', () => {
-  const ssid = $('newSsid').value.trim();
-  const pass = $('newPass').value;
-
-  if (!ssid) { log('Enter the new Wi-Fi name.', 'warn'); $('newSsid').focus(); return; }
-  if (pass.length > 0 && pass.length < 8) { log('Wi-Fi password must be at least 8 characters (or empty for open networks).', 'warn'); return; }
-
-  if (!confirm('Switch the device to "' + ssid + '"?')) return;
-
-  log('Sending Wi-Fi change to "' + ssid + '"...');
-  sendCommand('wifi', { ssid: ssid, pass: pass }, 75000);
-});
-
-$('resetBtn').addEventListener('click', () => {
-  if (!confirm('Reset the people counter to 0?')) return;
-  log('Sending counter reset...');
-  sendCommand('resetPeople', {}, 10000);
-});
-
-$('restartBtn').addEventListener('click', () => {
-  if (!confirm('Restart the device? The alarm is off for a few seconds while it boots.')) return;
-  log('Sending restart...');
-  sendCommand('restart', {}, 10000);
-});
-
 $('showPass').addEventListener('click', () => {
-  const show = $('newPass').type === 'password';
-  $('newPass').type = show ? 'text' : 'password';
-  $('showPass').textContent = show ? 'Hide' : 'Show';
+  $('pass').type = $('pass').type === 'password' ? 'text' : 'password';
 });
 
-$('rememberKey').addEventListener('change', () => {
-  if (!$('rememberKey').checked) store('session', 'sl-key', null);
+$('pass').addEventListener('keydown', e => { if (e.key === 'Enter') $('joinBtn').click(); });
+
+$('joinBtn').addEventListener('click', () => {
+  if (!selected || joining) return;
+
+  const pass = selected.open ? '' : $('pass').value;
+  if (!selected.open && pass.length < 8) {
+    setMsg('Password must be at least 8 characters', 'bad');
+    return;
+  }
+
+  if (!send({ action: 'wifi', ssid: selected.ssid, pass: pass })) return;
+
+  joining = true;
+  $('joinBtn').disabled = true;
+  setMsg('Sending to the ESP32...', 'wait');
+
+  joinTimer = setTimeout(() => {
+    finishJoin(false, 'No reply from the device. It may be offline.');
+  }, 70000);
 });
 
-// Auto-connect when a device ID was used before.
-if ($('deviceId').value) connect();
-else setPill($('devicePill'), 'warn', 'Device: enter ID in Settings');
+function handleAck(ack) {
+  if (!joining || !ack) return;
+
+  if (ack.ok && ack.msg.indexOf('Connecting') === 0) {
+    setMsg(ack.msg + ' This takes up to 40 seconds.', 'wait');
+    return;
+  }
+
+  finishJoin(ack.ok, ack.msg);
+}
+
+function finishJoin(ok, msg) {
+  clearTimeout(joinTimer);
+  joining = false;
+  $('joinBtn').disabled = false;
+  setMsg(msg, ok ? 'ok' : 'bad');
+  toast(msg);
+
+  if (ok) {
+    $('passBox').hidden = true;
+    $('pass').value = '';
+    selected = null;
+  }
+}
 </script>
 
 </body>
