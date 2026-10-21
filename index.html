@@ -494,6 +494,25 @@ button { font: inherit; color: inherit; }
   max-width: calc(100% - 32px);
 }
 
+.sound-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 16px;
+  padding: 12px;
+  border: 1px dashed var(--warn);
+  border-radius: 14px;
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--warn);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.sound-btn[hidden] { display: none; }
+
 .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; visibility: visible; }
 
 /* Landscape phones: tighter cards, chart beside nothing wasted */
@@ -551,6 +570,9 @@ button { font: inherit; color: inherit; }
       <span id="wifiName">Wi-Fi</span>
     </button>
   </div>
+
+  <!-- Browsers block sound until the page is tapped once -->
+  <button class="sound-btn" id="soundBtn">🔔 Tap to enable alarm sound</button>
 
   <!-- Overall status -->
   <div class="banner idle" id="banner">
@@ -812,21 +834,58 @@ $('chartSeg').addEventListener('click', e => {
 let lastAlarm = false;
 let dismissedAlert = '';
 
-function beep() {
+// One shared audio context, unlocked by the first tap anywhere on the page.
+let audioCtx = null;
+let sirenTimer = null;
+
+function unlockAudio() {
   try {
-    const ctx = new AudioContext();
-    [0, 0.35, 0.7].forEach(t => {
-      const o = ctx.createOscillator();
-      const g = ctx.createGain();
-      o.connect(g);
-      g.connect(ctx.destination);
-      o.frequency.value = 880;
-      g.gain.value = 0.15;
-      o.start(ctx.currentTime + t);
-      o.stop(ctx.currentTime + t + 0.2);
-    });
-    setTimeout(() => ctx.close(), 1200);
-  } catch (e) { /* audio blocked until the page is tapped */ }
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  } catch (e) { /* no audio support */ }
+  updateSoundBtn();
+}
+
+function updateSoundBtn() {
+  $('soundBtn').hidden = !!audioCtx && audioCtx.state === 'running';
+}
+
+['click', 'touchstart', 'keydown'].forEach(ev =>
+  document.addEventListener(ev, unlockAudio, { passive: true }));
+
+$('soundBtn').addEventListener('click', () => {
+  unlockAudio();
+  setTimeout(() => { beep(); updateSoundBtn(); }, 50);
+  toast('Alarm sound enabled');
+});
+
+// Two-tone alarm burst (about 1 s).
+function beep() {
+  if (!audioCtx || audioCtx.state !== 'running') return;
+  const now = audioCtx.currentTime;
+  [0, 0.25, 0.5, 0.75].forEach((t, i) => {
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = 'square';
+    o.frequency.value = i % 2 ? 660 : 990;
+    g.gain.value = 0.12;
+    o.connect(g);
+    g.connect(audioCtx.destination);
+    o.start(now + t);
+    o.stop(now + t + 0.22);
+  });
+}
+
+// Keeps sounding until the popup is acknowledged or the alarm clears.
+function startSiren() {
+  stopSiren();
+  beep();
+  sirenTimer = setInterval(beep, 1500);
+}
+
+function stopSiren() {
+  clearInterval(sirenTimer);
+  sirenTimer = null;
 }
 
 function showAlarm(d) {
@@ -834,15 +893,16 @@ function showAlarm(d) {
   $('alarmTitle').textContent = flame && d.gas ? 'Fire & Gas Alert!' : flame ? 'Flame Detected!' : 'Gas / Smoke Alert!';
   $('alarmText').textContent = (flame ? 'The flame sensor has been triggered. ' : '') +
     (d.gas ? 'Gas/smoke level is above the safe limit (' + d.mq2Raw + ' / ' + d.mq2Threshold + '). ' : '') +
-    'Check the lab immediately. The buzzer is sounding.';
+    'Check the lab immediately.';
   $('alarmTime').textContent = 'Detected at ' + new Date().toLocaleTimeString();
   $('alarmOverlay').classList.add('open');
-  beep();
+  startSiren();
   if (navigator.vibrate) navigator.vibrate([400, 200, 400]);
 }
 
 $('alarmOk').addEventListener('click', () => {
   $('alarmOverlay').classList.remove('open');
+  stopSiren();
   dismissedAlert = state ? state.alert : '';
 });
 
@@ -912,6 +972,7 @@ function render() {
   }
   if (!d.alarm && lastAlarm) {
     $('alarmOverlay').classList.remove('open');
+    stopSiren();
     dismissedAlert = '';
     toast('Alarm cleared. Lab is safe.');
   }
