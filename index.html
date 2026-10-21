@@ -261,6 +261,31 @@ button { font: inherit; color: inherit; }
 .state.bad { background: rgba(239, 68, 68, 0.15); color: var(--bad); }
 .state.warn { background: rgba(245, 158, 11, 0.15); color: var(--warn); }
 
+.flow {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.flow div {
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: var(--card-2);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.flow b {
+  display: block;
+  font-size: 18px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.flow .in b { color: var(--ok); }
+.flow .out b { color: var(--warn); }
+
 .card.alert-on { border-color: var(--bad); box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.35), var(--shadow); }
 
 /* ---------- Chart ---------- */
@@ -636,10 +661,13 @@ button { font: inherit; color: inherit; }
     <div class="card">
       <div class="card-head">
         <div class="card-icon" style="background:rgba(52,211,153,.15);color:var(--people)"><svg width="20" height="20"><use href="#i-people"/></svg></div>
-        <div class="card-title">People Inside</div>
+        <div class="card-title">People in Lab</div>
       </div>
       <div class="big" id="people">--</div>
-      <div class="sub">Counted at the door</div>
+      <div class="flow">
+        <div class="in">↑ Entries<b id="entries">--</b></div>
+        <div class="out">↓ Exits<b id="exits">--</b></div>
+      </div>
     </div>
 
   </div>
@@ -949,6 +977,8 @@ function render() {
 
   // People
   $('people').textContent = d.people;
+  $('entries').textContent = d.entries === undefined ? '--' : d.entries;
+  $('exits').textContent = d.exits === undefined ? '--' : d.exits;
 
   // Banner
   const banner = $('banner');
