@@ -1,0 +1,211 @@
+/* Shared styles for the SMART LAB circuit and code pages (matches the dashboard). */
+
+:root {
+  --bg: #0a0f1c;
+  --card: #121a2b;
+  --card-2: #182238;
+  --line: #233150;
+  --text: #eef3ff;
+  --muted: #8d9bb8;
+  --accent: #4f8cff;
+  --ok: #22c55e;
+  --warn: #f59e0b;
+  --bad: #ef4444;
+  --temp: #ff8a4c;
+  --hum: #38bdf8;
+  --gas: #a78bfa;
+  --people: #34d399;
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  --radius: 20px;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f2f5fb;
+    --card: #ffffff;
+    --card-2: #f4f7fc;
+    --line: #e1e7f2;
+    --text: #0f172a;
+    --muted: #64748b;
+    --shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.55;
+}
+
+a { color: var(--accent); }
+
+.wrap {
+  max-width: 1100px;
+  margin: auto;
+  padding: 16px 16px 40px;
+}
+
+/* Top bar + navigation */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #4f8cff, #7c5cff);
+  color: #fff;
+  flex: 0 0 auto;
+}
+
+.brand { flex: 1; min-width: 160px; }
+.brand h1 { margin: 0; font-size: 20px; font-weight: 800; }
+.brand p { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
+
+.nav {
+  display: inline-flex;
+  padding: 4px;
+  border-radius: 14px;
+  background: var(--card);
+  border: 1px solid var(--line);
+}
+
+.nav a {
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.nav a.on { background: var(--accent); color: #fff; }
+.nav a:not(.on):hover { color: var(--text); }
+
+/* Cards */
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
+  margin-bottom: 16px;
+}
+
+.card h2 { margin: 0 0 6px; font-size: 18px; }
+.card > p { margin: 0 0 14px; color: var(--muted); font-size: 14px; }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.grid .card { margin-bottom: 0; }
+
+.card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+.pin {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--card-2);
+  border: 1px solid var(--line);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Tables */
+
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { padding: 9px 8px; border-top: 1px solid var(--line); text-align: left; vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: 13px; border-top: 0; }
+
+.table-scroll { overflow-x: auto; }
+
+/* Callouts */
+
+.note {
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  margin-top: 12px;
+  background: rgba(79, 140, 255, 0.1);
+  border: 1px solid rgba(79, 140, 255, 0.3);
+}
+
+.note.warn { background: rgba(245, 158, 11, 0.1); border-color: rgba(245, 158, 11, 0.35); }
+.note.bad { background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.35); }
+
+/* Buttons */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 16px;
+  border-radius: 12px;
+  border: 0;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn.ghost { background: var(--card-2); color: var(--text); border: 1px solid var(--line); }
+.btn:hover { filter: brightness(1.08); }
+
+.actions { display: flex; flex-wrap: wrap; gap: 10px; }
+
+pre.ascii {
+  margin: 10px 0 0;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--card-2);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-x: auto;
+}
+
+ol.steps { margin: 0; padding-left: 20px; }
+ol.steps li { margin: 6px 0; }
+
+.foot { text-align: center; color: var(--muted); font-size: 12px; margin-top: 24px; }
+
+@media (max-width: 520px) {
+  .brand p { display: none; }
+  .nav { width: 100%; }
+  .nav a { flex: 1; text-align: center; padding: 8px 6px; }
+  .card { padding: 16px; }
+}

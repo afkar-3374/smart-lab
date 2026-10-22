@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SMART LAB Circuit</title>
+<meta name="description" content="Wiring and circuit details for the SMART LAB ESP32 monitoring system.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/site.css">
+<style>
+.diagram-scroll { overflow-x: auto; margin: 0 -4px; }
+.diagram { display: block; width: 100%; min-width: 760px; height: auto; }
+
+.diagram text { font-family: Inter, system-ui, sans-serif; fill: var(--text); }
+.diagram .muted { fill: var(--muted); }
+.diagram .board { fill: var(--card-2); stroke: var(--line); stroke-width: 2; }
+.diagram .chip { fill: var(--card); stroke: var(--line); }
+.diagram .pinc { fill: var(--card); stroke: var(--muted); stroke-width: 1.5; }
+.diagram .pinc.used { stroke-width: 0; }
+.diagram .box { fill: var(--card); stroke-width: 2; }
+.diagram .wire { fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.diagram .pwr { fill: none; stroke-width: 2.5; stroke-dasharray: 6 5; stroke-linecap: round; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="logo">
+      <svg width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 3h6M10 3v6L4.5 18.5A1.7 1.7 0 0 0 6 21h12a1.7 1.7 0 0 0 1.5-2.5L14 9V3M7 15h10"/></svg>
+    </div>
+    <div class="brand">
+      <h1>SMART LAB · Circuit</h1>
+      <p>How every sensor connects to the ESP32</p>
+    </div>
+    <nav class="nav">
+      <a href="../">Dashboard</a>
+      <a href="./" class="on">Circuit</a>
+      <a href="../code/">Code</a>
+    </nav>
+  </div>
+
+  <!-- Diagram -->
+  <div class="card">
+    <h2>Wiring diagram</h2>
+    <p>ESP32 DevKit (30-pin) seen from above: antenna at the top, USB at the bottom. Solid lines are signals, dashed lines are power.</p>
+
+    <div class="diagram-scroll">
+      <svg class="diagram" viewBox="0 0 900 520" role="img" aria-label="Wiring diagram: MQ-2 to G34 and VIN, buzzer to G25, IR B to G19, IR A to G18, DHT22 to G4, flame sensor to G15, all sensors share GND">
+
+        <!-- Board -->
+        <rect class="board" x="340" y="40" width="220" height="460" rx="14"/>
+        <rect class="chip" x="395" y="48" width="110" height="30" rx="4"/>
+        <text x="450" y="68" text-anchor="middle" font-size="12" class="muted">antenna</text>
+        <text x="450" y="250" text-anchor="middle" font-size="22" font-weight="800">ESP32</text>
+        <text x="450" y="272" text-anchor="middle" font-size="12" class="muted">DevKit V1</text>
+        <rect class="chip" x="420" y="478" width="60" height="22" rx="4"/>
+        <text x="450" y="494" text-anchor="middle" font-size="11" class="muted">USB</text>
+
+        <!-- Left pins: EN VP VN G34 G35 G32 G33 G25 G26 G27 G14 G12 G13 GND VIN -->
+        <g font-size="12" font-weight="600">
+          <circle class="pinc" cx="355" cy="92" r="5"/><text x="368" y="96" class="muted">EN</text>
+          <circle class="pinc" cx="355" cy="118" r="5"/><text x="368" y="122" class="muted">VP</text>
+          <circle class="pinc" cx="355" cy="144" r="5"/><text x="368" y="148" class="muted">VN</text>
+          <circle class="pinc used" cx="355" cy="170" r="6" fill="var(--gas)"/><text x="368" y="174">G34</text>
+          <circle class="pinc" cx="355" cy="196" r="5"/><text x="368" y="200" class="muted">G35</text>
+          <circle class="pinc" cx="355" cy="222" r="5"/><text x="368" y="226" class="muted">G32</text>
+          <circle class="pinc" cx="355" cy="248" r="5"/><text x="368" y="252" class="muted">G33</text>
+          <circle class="pinc used" cx="355" cy="274" r="6" fill="var(--warn)"/><text x="368" y="278">G25</text>
+          <circle class="pinc" cx="355" cy="300" r="5"/><text x="368" y="304" class="muted">G26</text>
+          <circle class="pinc" cx="355" cy="326" r="5"/><text x="368" y="330" class="muted">G27</text>
+          <circle class="pinc" cx="355" cy="352" r="5"/><text x="368" y="356" class="muted">G14</text>
+          <circle class="pinc" cx="355" cy="378" r="5"/><text x="368" y="382" class="muted">G12</text>
+          <circle class="pinc" cx="355" cy="404" r="5"/><text x="368" y="408" class="muted">G13</text>
+          <circle class="pinc used" cx="355" cy="430" r="6" fill="var(--muted)"/><text x="368" y="434">GND</text>
+          <circle class="pinc used" cx="355" cy="456" r="6" fill="var(--bad)"/><text x="368" y="460">VIN</text>
+        </g>
+
+        <!-- Right pins: G23 G22 TX RX G21 G19 G18 G5 TX2 RX2 G4 G2 G15 GND 3V3 -->
+        <g font-size="12" font-weight="600" text-anchor="end">
+          <circle class="pinc" cx="545" cy="92" r="5"/><text x="532" y="96" class="muted">G23</text>
+          <circle class="pinc" cx="545" cy="118" r="5"/><text x="532" y="122" class="muted">G22</text>
+          <circle class="pinc" cx="545" cy="144" r="5"/><text x="532" y="148" class="muted">TX</text>
+          <circle class="pinc" cx="545" cy="170" r="5"/><text x="532" y="174" class="muted">RX</text>
+          <circle class="pinc" cx="545" cy="196" r="5"/><text x="532" y="200" class="muted">G21</text>
+          <circle class="pinc used" cx="545" cy="222" r="6" fill="#14b8a6"/><text x="532" y="226">G19</text>
+          <circle class="pinc used" cx="545" cy="248" r="6" fill="var(--people)"/><text x="532" y="252">G18</text>
+          <circle class="pinc" cx="545" cy="274" r="5"/><text x="532" y="278" class="muted">G5</text>
+          <circle class="pinc" cx="545" cy="300" r="5"/><text x="532" y="304" class="muted">TX2</text>
+          <circle class="pinc" cx="545" cy="326" r="5"/><text x="532" y="330" class="muted">RX2</text>
+          <circle class="pinc used" cx="545" cy="352" r="6" fill="var(--temp)"/><text x="532" y="356">G4</text>
+          <circle class="pinc" cx="545" cy="378" r="5"/><text x="532" y="382" class="muted">G2</text>
+          <circle class="pinc used" cx="545" cy="404" r="6" fill="var(--bad)"/><text x="532" y="408">G15</text>
+          <circle class="pinc used" cx="545" cy="430" r="6" fill="var(--muted)"/><text x="532" y="434">GND</text>
+          <circle class="pinc used" cx="545" cy="456" r="6" fill="var(--hum)"/><text x="532" y="460">3V3</text>
+        </g>
+
+        <!-- Left sensors -->
+        <rect class="box" x="30" y="115" width="210" height="90" rx="12" stroke="var(--gas)"/>
+        <text x="46" y="140" font-size="15" font-weight="800">MQ-2 gas</text>
+        <text x="46" y="160" font-size="12" class="muted">AO → divider → G34</text>
+        <text x="46" y="177" font-size="12" class="muted">VCC → VIN (5 V)</text>
+        <text x="46" y="194" font-size="12" class="muted">GND → GND</text>
+
+        <rect class="box" x="30" y="248" width="210" height="56" rx="12" stroke="var(--warn)"/>
+        <text x="46" y="272" font-size="15" font-weight="800">Buzzer</text>
+        <text x="46" y="292" font-size="12" class="muted">+ → G25 · − → GND</text>
+
+        <!-- Left wires -->
+        <path class="wire" stroke="var(--gas)" d="M349 170 H285 V150 H240"/>
+        <rect x="262" y="138" width="46" height="18" rx="4" fill="var(--card)" stroke="var(--gas)"/>
+        <text x="285" y="151" text-anchor="middle" font-size="10" font-weight="700">10k/20k</text>
+        <path class="wire" stroke="var(--warn)" d="M349 274 H240"/>
+        <path class="pwr" stroke="var(--bad)" d="M349 456 H310 V190 H240"/>
+        <text x="300" y="476" text-anchor="end" font-size="11" class="muted">5 V to MQ-2</text>
+        <path class="pwr" stroke="var(--muted)" d="M349 430 H250"/>
+        <text x="245" y="434" text-anchor="end" font-size="11" class="muted">GND → MQ-2, buzzer</text>
+
+        <!-- Right sensors -->
+        <rect class="box" x="660" y="120" width="210" height="54" rx="12" stroke="#14b8a6"/>
+        <text x="676" y="143" font-size="15" font-weight="800">IR B</text>
+        <text x="676" y="162" font-size="12" class="muted">OUT → G19 · inside</text>
+
+        <rect class="box" x="660" y="195" width="210" height="54" rx="12" stroke="var(--people)"/>
+        <text x="676" y="218" font-size="15" font-weight="800">IR A</text>
+        <text x="676" y="237" font-size="12" class="muted">OUT → G18 · outside</text>
+
+        <rect class="box" x="660" y="268" width="210" height="54" rx="12" stroke="var(--temp)"/>
+        <text x="676" y="291" font-size="15" font-weight="800">DHT22</text>
+        <text x="676" y="310" font-size="12" class="muted">DATA → G4</text>
+
+        <rect class="box" x="660" y="358" width="210" height="54" rx="12" stroke="var(--bad)"/>
+        <text x="676" y="381" font-size="15" font-weight="800">Flame sensor</text>
+        <text x="676" y="400" font-size="12" class="muted">D0 → G15</text>
+
+        <!-- Right wires -->
+        <path class="wire" stroke="#14b8a6" d="M551 222 H605 V147 H660"/>
+        <path class="wire" stroke="var(--people)" d="M551 248 H625 V222 H660"/>
+        <path class="wire" stroke="var(--temp)" d="M551 352 H625 V295 H660"/>
+        <path class="wire" stroke="var(--bad)" d="M551 404 H605 V385 H660"/>
+        <path class="pwr" stroke="var(--muted)" d="M551 430 H640"/>
+        <text x="648" y="434" font-size="11" class="muted">GND → DHT22, flame, IR A, IR B</text>
+        <path class="pwr" stroke="var(--hum)" d="M551 456 H640"/>
+        <text x="648" y="460" font-size="11" class="muted">3V3 → DHT22, flame, IR A, IR B</text>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Per-sensor tables -->
+  <div class="grid">
+
+    <div class="card">
+      <div class="card-head"><span class="dot" style="background:var(--bad)"></span><h2>Flame sensor</h2></div>
+      <table>
+        <tr><th>Sensor pin</th><th>ESP32</th></tr>
+        <tr><td>VCC</td><td><span class="pin">3V3</span></td></tr>
+        <tr><td>GND</td><td><span class="pin">GND</span></td></tr>
+        <tr><td>D0 (digital out)</td><td><span class="pin">G15</span></td></tr>
+        <tr><td>A0</td><td>not used</td></tr>
+      </table>
+      <div class="note">Use <b>D0</b>, not A0. The module's D0 LED lights when it sees a flame. Turn its blue screw to set the distance.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="dot" style="background:var(--gas)"></span><h2>MQ-2 gas / smoke</h2></div>
+      <table>
+        <tr><th>Sensor pin</th><th>ESP32</th></tr>
+        <tr><td>VCC</td><td><span class="pin">VIN</span> (5 V)</td></tr>
+        <tr><td>GND</td><td><span class="pin">GND</span></td></tr>
+        <tr><td>AO (analog out)</td><td>divider → <span class="pin">G34</span></td></tr>
+        <tr><td>DO</td><td>not used</td></tr>
+      </table>
+      <pre class="ascii">MQ-2 AO ── 10 kΩ ──┬── G34
+                   │
+                 20 kΩ
+                   │
+                  GND</pre>
+      <div class="note warn">AO can reach 5 V; G34 accepts 3.3 V at most. The divider brings it down safely. Clean air reads about 260; the alarm triggers at 800. Allow 2 minutes of warm-up.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="dot" style="background:var(--people)"></span><h2>IR sensors (people counter)</h2></div>
+      <table>
+        <tr><th>Sensor pin</th><th>IR A (outside)</th><th>IR B (inside)</th></tr>
+        <tr><td>VCC</td><td><span class="pin">3V3</span></td><td><span class="pin">3V3</span></td></tr>
+        <tr><td>GND</td><td><span class="pin">GND</span></td><td><span class="pin">GND</span></td></tr>
+        <tr><td>OUT</td><td><span class="pin">G18</span></td><td><span class="pin">G19</span></td></tr>
+      </table>
+      <pre class="ascii">  OUTSIDE  │  door  │  INSIDE
+   [IR A]  │ ─────► │  [IR B]
+
+ A then B (within 1.5 s) = entry
+ B then A (within 1.5 s) = exit</pre>
+      <div class="note">Mount them 10–15 cm apart at waist height, pointing across the doorway. Adjust each blue screw so the LED lights only when someone passes.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="dot" style="background:var(--temp)"></span><h2>DHT22 temperature &amp; humidity</h2></div>
+      <table>
+        <tr><th>Sensor pin</th><th>ESP32</th></tr>
+        <tr><td>+ / VCC</td><td><span class="pin">3V3</span></td></tr>
+        <tr><td>OUT / DATA / S</td><td><span class="pin">G4</span></td></tr>
+        <tr><td>− / GND</td><td><span class="pin">GND</span></td></tr>
+      </table>
+      <div class="note warn">Wire by the <b>labels printed on the module</b>, since pin order differs between brands. A bare 4-pin DHT22 also needs a <b>10 kΩ resistor</b> from DATA to 3V3.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="dot" style="background:var(--warn)"></span><h2>Buzzer</h2></div>
+      <table>
+        <tr><th>Buzzer pin</th><th>ESP32</th></tr>
+        <tr><td>+ (long leg)</td><td><span class="pin">G25</span></td></tr>
+        <tr><td>−</td><td><span class="pin">GND</span></td></tr>
+      </table>
+      <div class="note">Use an <b>active</b> buzzer (it beeps by itself on 3–5 V). For a louder buzzer, drive it through an NPN transistor (2N2222 / S8050) with a 1 kΩ base resistor.</div>
+      <div class="note bad">Never use <b>G0</b>, <b>G2</b> or <b>G12</b> for the buzzer: they control how the ESP32 boots.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="dot" style="background:var(--hum)"></span><h2>Power &amp; ground</h2></div>
+      <table>
+        <tr><th>Rail</th><th>Feeds</th></tr>
+        <tr><td><span class="pin">VIN</span> 5 V (from USB)</td><td>MQ-2 heater</td></tr>
+        <tr><td><span class="pin">3V3</span></td><td>DHT22, flame, IR A, IR B</td></tr>
+        <tr><td><span class="pin">GND</span></td><td>Every sensor and the buzzer</td></tr>
+      </table>
+      <div class="note warn">All grounds must be connected together. Use a short, good-quality USB data cable; the MQ-2 heater draws about 150 mA, and a weak cable causes USB dropouts.</div>
+      <div class="note">The fan runs separately from its own 12 V adapter.</div>
+    </div>
+
+  </div>
+
+  <!-- Pin summary -->
+  <div class="card" style="margin-top:16px">
+    <h2>Pin summary</h2>
+    <p>Matches the pin definitions in the firmware.</p>
+    <div class="table-scroll">
+      <table>
+        <tr><th>ESP32 pin</th><th>Connected to</th><th>Type</th><th>In code</th></tr>
+        <tr><td><span class="pin">G4</span></td><td>DHT22 DATA</td><td>Digital</td><td><code>DHT_PIN</code></td></tr>
+        <tr><td><span class="pin">G15</span></td><td>Flame sensor D0</td><td>Digital input</td><td><code>FLAME_PIN</code></td></tr>
+        <tr><td><span class="pin">G18</span></td><td>IR A OUT (outside)</td><td>Digital input</td><td><code>IR_A_PIN</code></td></tr>
+        <tr><td><span class="pin">G19</span></td><td>IR B OUT (inside)</td><td>Digital input</td><td><code>IR_B_PIN</code></td></tr>
+        <tr><td><span class="pin">G25</span></td><td>Buzzer +</td><td>Digital output</td><td><code>BUZZER_PIN</code></td></tr>
+        <tr><td><span class="pin">G34</span></td><td>MQ-2 AO (via divider)</td><td>Analog input</td><td><code>MQ2_AO_PIN</code></td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="foot">SMART LAB · <a href="../">Dashboard</a> · <a href="../code/">Code</a> · <a href="https://github.com/afkar-3374/smart-lab">GitHub</a></div>
+</div>
+</body>
+</html>

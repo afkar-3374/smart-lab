@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SMART LAB Code</title>
+<meta name="description" content="ESP32 Arduino firmware for SMART LAB, with download.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/site.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" media="(prefers-color-scheme: dark)">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" media="(prefers-color-scheme: light)">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/cpp.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+.tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--line);
+  margin: 0 -20px 0;
+  padding: 0 20px;
+  overflow-x: auto;
+}
+
+.tabs button {
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 14px;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tabs button.on { color: var(--text); border-bottom-color: var(--accent); }
+
+.code-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 12px 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.code-box {
+  margin: 0 -20px -20px;
+  border-top: 1px solid var(--line);
+  max-height: 70vh;
+  overflow: auto;
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+
+.code-box pre { margin: 0; }
+
+.code-box code.hljs {
+  padding: 16px 20px;
+  font-size: 13px;
+  line-height: 1.55;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  background: transparent;
+}
+
+.mini {
+  border: 1px solid var(--line);
+  background: var(--card-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.libs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+
+@media (max-width: 520px) {
+  .tabs, .code-box { margin-left: -16px; margin-right: -16px; }
+  .tabs { padding: 0 16px; }
+  .code-box { margin-bottom: -16px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="logo">
+      <svg width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 3h6M10 3v6L4.5 18.5A1.7 1.7 0 0 0 6 21h12a1.7 1.7 0 0 0 1.5-2.5L14 9V3M7 15h10"/></svg>
+    </div>
+    <div class="brand">
+      <h1>SMART LAB · Code</h1>
+      <p>ESP32 Arduino firmware</p>
+    </div>
+    <nav class="nav">
+      <a href="../">Dashboard</a>
+      <a href="../circuit/">Circuit</a>
+      <a href="./" class="on">Code</a>
+    </nav>
+  </div>
+
+  <!-- Download -->
+  <div class="card">
+    <h2>Download</h2>
+    <p>The ZIP is a complete Arduino sketch folder. Unzip it, open <b>smart_lab_mqtt.ino</b> in Arduino IDE, and enter your Wi-Fi in <b>secrets.h</b>.</p>
+    <div class="actions">
+      <button class="btn" id="dlZip">
+        <svg width="18" height="18" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0-5-5m5 5 5-5M4 21h16"/></svg>
+        Download sketch (.zip)
+      </button>
+      <button class="btn ghost" id="dlIno">Download .ino only</button>
+      <a class="btn ghost" href="https://github.com/afkar-3374/smart-lab/tree/main/firmware/smart_lab_mqtt">View on GitHub</a>
+    </div>
+  </div>
+
+  <!-- Viewer -->
+  <div class="card">
+    <div class="tabs" id="tabs"></div>
+    <div class="code-bar">
+      <span id="fileInfo">Loading...</span>
+      <button class="mini" id="copyBtn">Copy</button>
+    </div>
+    <div class="code-box"><pre><code id="code" class="language-cpp">Loading...</code></pre></div>
+  </div>
+
+  <!-- How to upload -->
+  <div class="grid">
+    <div class="card">
+      <h2>Upload to the ESP32</h2>
+      <ol class="steps">
+        <li>Install <b>Arduino IDE</b> and the <b>esp32</b> board package (Boards Manager → "esp32 by Espressif").</li>
+        <li>Install the libraries below from <b>Library Manager</b>.</li>
+        <li>Copy <code>secrets.example.h</code> to <code>secrets.h</code> (the ZIP already includes it) and enter your Wi-Fi name and password. The ESP32 needs <b>2.4 GHz</b> Wi-Fi.</li>
+        <li>Board: <b>ESP32 Dev Module</b>. Upload Speed: <b>115200</b>.</li>
+        <li>Click Upload. Hold <b>BOOT</b> if it waits at "Connecting...".</li>
+        <li>Open the <a href="../">dashboard</a>. It shows <b>Live</b> within a few seconds.</li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <h2>Libraries</h2>
+      <p>Install from Sketch → Include Library → Manage Libraries.</p>
+      <div class="libs">
+        <span class="pin">DHT sensor library (Adafruit)</span>
+        <span class="pin">Adafruit Unified Sensor</span>
+        <span class="pin">PubSubClient</span>
+        <span class="pin">ArduinoJson</span>
+      </div>
+      <div class="note">If no saved Wi-Fi works, the ESP32 opens the <b>SMART-LAB-Setup</b> hotspot (password <code>SmartLab123</code>). Join it and open <code>http://192.168.4.1</code> to set Wi-Fi.</div>
+    </div>
+  </div>
+
+  <div class="foot">SMART LAB · <a href="../">Dashboard</a> · <a href="../circuit/">Circuit</a> · <a href="https://github.com/afkar-3374/smart-lab">GitHub</a></div>
+</div>
+
+<script>
+'use strict';
+
+const BASE = '../firmware/smart_lab_mqtt/';
+const FILES = [
+  { name: 'smart_lab_mqtt.ino', label: 'smart_lab_mqtt.ino' },
+  { name: 'secrets.example.h', label: 'secrets.example.h' }
+];
+
+const $ = id => document.getElementById(id);
+const contents = {};
+let current = FILES[0].name;
+
+function show(name) {
+  current = name;
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.name === name));
+
+  const text = contents[name];
+  const code = $('code');
+
+  if (text === undefined) {
+    code.textContent = 'Could not load this file.';
+    $('fileInfo').textContent = name;
+    return;
+  }
+
+  code.textContent = text;
+  code.removeAttribute('data-highlighted');
+  code.className = 'language-cpp';
+  if (window.hljs) hljs.highlightElement(code);
+
+  const lines = text.split('\n').length;
+  $('fileInfo').textContent = name + ' · ' + lines + ' lines · ' + (text.length / 1024).toFixed(1) + ' KB';
+}
+
+function download(name, blob) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+FILES.forEach(f => {
+  const b = document.createElement('button');
+  b.textContent = f.label;
+  b.dataset.name = f.name;
+  b.addEventListener('click', () => show(f.name));
+  $('tabs').appendChild(b);
+});
+
+Promise.all(FILES.map(f =>
+  fetch(BASE + f.name, { cache: 'no-store' })
+    .then(r => r.ok ? r.text() : Promise.reject())
+    .then(t => { contents[f.name] = t; })
+    .catch(() => {})
+)).then(() => show(current));
+
+$('copyBtn').addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(contents[current] || '');
+    $('copyBtn').textContent = 'Copied!';
+  } catch (e) {
+    $('copyBtn').textContent = 'Copy failed';
+  }
+  setTimeout(() => { $('copyBtn').textContent = 'Copy'; }, 1500);
+});
+
+$('dlIno').addEventListener('click', () => {
+  if (!contents['smart_lab_mqtt.ino']) return;
+  download('smart_lab_mqtt.ino', new Blob([contents['smart_lab_mqtt.ino']], { type: 'text/plain' }));
+});
+
+// ZIP = ready-to-open Arduino sketch folder, with secrets.h made from the template.
+$('dlZip').addEventListener('click', async () => {
+  if (!window.JSZip || !contents['smart_lab_mqtt.ino']) {
+    $('dlIno').click();
+    return;
+  }
+  const zip = new JSZip();
+  const dir = zip.folder('smart_lab_mqtt');
+  dir.file('smart_lab_mqtt.ino', contents['smart_lab_mqtt.ino']);
+  dir.file('secrets.example.h', contents['secrets.example.h'] || '');
+  dir.file('secrets.h', contents['secrets.example.h'] || '');
+  download('smart_lab_mqtt.zip', await zip.generateAsync({ type: 'blob' }));
+});
+</script>
+</body>
+</html>
