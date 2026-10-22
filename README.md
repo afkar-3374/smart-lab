@@ -4,9 +4,9 @@ ESP32 laboratory monitoring and safety system with a live online dashboard.
 
 | | Link |
 |---|---|
-| 📊 **Dashboard** | https://afkar-3374.github.io/smart-lab/ |
-| 🔌 **Circuit details** | https://afkar-3374.github.io/smart-lab/circuit/ |
-| 💻 **Code & download** | https://afkar-3374.github.io/smart-lab/code/ |
+| 📊 **Dashboard** | https://smartlab.electrosparkzz.in/ |
+| 🔌 **Circuit details** | https://smartlab.electrosparkzz.in/circuit/ |
+| 💻 **Code & download** | https://smartlab.electrosparkzz.in/code/ |
 
 ## Features
 
@@ -30,7 +30,7 @@ ESP32 laboratory monitoring and safety system with a live online dashboard.
 | MQ-2 AO (via 10k/20k divider) | G34 |
 
 Power: MQ-2 VCC → VIN (5 V); all other sensors → 3V3; all grounds → GND.
-Full diagram and notes: [circuit page](https://afkar-3374.github.io/smart-lab/circuit/).
+Full diagram and notes: [circuit page](https://smartlab.electrosparkzz.in/circuit/).
 
 ## Firmware
 
