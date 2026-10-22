@@ -37,6 +37,8 @@
 .diagram { --gndc: #64748b; }
 .diagram .stub { fill: var(--card); stroke: var(--muted); stroke-width: 1.5; }
 @media (prefers-color-scheme: light) { .diagram { --gndc: #334155; } }
+html.force-light .diagram { --gndc: #334155; }
+@media print { .diagram { --gndc: #334155; } }
 </style>
 </head>
 <body>
@@ -62,6 +64,12 @@
   <div class="card">
     <h2>Wiring diagram</h2>
     <p>ESP32 DevKit (30-pin) seen from above: antenna at the top, USB at the bottom. Every sensor's VCC, GND and signal wire is shown.</p>
+
+    <div class="dl-bar">
+      <button id="dlPng"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0-5-5m5 5 5-5M4 21h16"/></svg> Download PNG</button>
+      <button id="dlSvg"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0-5-5m5 5 5-5M4 21h16"/></svg> Download SVG</button>
+      <button id="dlPdf"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v7H6z"/></svg> Print / Save as PDF</button>
+    </div>
 
     <div class="diagram-scroll">
       <svg class="diagram" viewBox="0 0 1060 560" role="img" aria-label="Wiring diagram. Right side: IR B OUT to G19, IR A OUT to G18, DHT22 DATA to G4, flame D0 to G15, each with VCC to 3V3 and GND to GND. Left side: MQ-2 AO through a 10k and 20k divider to G34, VCC to VIN, GND to GND; buzzer plus to G25 and minus to GND.">
@@ -323,6 +331,85 @@
   if (box && box.scrollWidth > box.clientWidth) {
     box.scrollLeft = (box.scrollWidth - box.clientWidth) / 2;
   }
+})();
+</script>
+<script>
+// Download the wiring diagram (always in light colours, so it prints well).
+(function () {
+  'use strict';
+
+  const W = 1060, H = 560;
+  const PROPS = ['fill', 'stroke', 'stroke-width', 'stroke-dasharray', 'stroke-linecap',
+                 'stroke-linejoin', 'opacity', 'font-size', 'font-weight', 'text-anchor'];
+
+  // Copy of the diagram with every colour written out, so it looks the same outside this page.
+  function standaloneSvg() {
+    const root = document.documentElement;
+    root.classList.add('force-light');
+
+    const src = document.querySelector('.diagram');
+    const copy = src.cloneNode(true);
+    const from = src.querySelectorAll('*');
+    const to = copy.querySelectorAll('*');
+
+    from.forEach((el, i) => {
+      const cs = getComputedStyle(el);
+      PROPS.forEach(p => to[i].style.setProperty(p, cs.getPropertyValue(p)));
+      to[i].removeAttribute('class');
+    });
+
+    root.classList.remove('force-light');
+
+    copy.removeAttribute('class');
+    copy.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    copy.setAttribute('width', W);
+    copy.setAttribute('height', H);
+    copy.setAttribute('font-family', 'Inter, Segoe UI, Roboto, Arial, sans-serif');
+
+    const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    bg.setAttribute('width', W);
+    bg.setAttribute('height', H);
+    bg.setAttribute('fill', '#ffffff');
+    copy.insertBefore(bg, copy.firstChild);
+
+    return new XMLSerializer().serializeToString(copy);
+  }
+
+  function save(blob, name) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+
+  document.getElementById('dlSvg').addEventListener('click', () => {
+    save(new Blob([standaloneSvg()], { type: 'image/svg+xml' }), 'smart-lab-wiring.svg');
+  });
+
+  document.getElementById('dlPng').addEventListener('click', () => {
+    const scale = 3;   // sharp enough to print
+    const img = new Image();
+    const url = URL.createObjectURL(new Blob([standaloneSvg()], { type: 'image/svg+xml' }));
+
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = W * scale;
+      canvas.height = H * scale;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      canvas.toBlob(blob => save(blob, 'smart-lab-wiring.png'), 'image/png');
+    };
+
+    img.src = url;
+  });
+
+  document.getElementById('dlPdf').addEventListener('click', () => window.print());
 })();
 </script>
 </body>

@@ -7,7 +7,7 @@
   - Live data (MQTT over WebSocket) never goes through here.
 */
 
-const VERSION = 'smartlab-v4';
+const VERSION = 'smartlab-v5';
 
 const SHELL = [
   './',
