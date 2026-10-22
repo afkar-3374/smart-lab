@@ -66,6 +66,9 @@
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
+/* Elements marked hidden stay hidden, whatever their display style. */
+[hidden] { display: none !important; }
+
 html { scroll-behavior: smooth; }
 
 body {
@@ -1052,7 +1055,7 @@ body.loading .skel * { visibility: hidden; }
       <div class="gas-bottom">
         <div class="meter">
           <div class="meter-fill" id="mq2Bar"></div>
-          <div class="meter-mark" id="mq2Mark" data-label="limit"></div>
+          <div class="meter-mark" id="mq2Mark" data-label="limit" hidden></div>
         </div>
         <div class="meter-legend"><span>Clean air</span><span>Danger</span></div>
       </div>
@@ -1262,6 +1265,7 @@ $$('.gauge .track').forEach(t => t.style.strokeDasharray = ARC_LEN + ' ' + ARC_C
 function setArc(id, fraction) {
   const f = Math.max(0, Math.min(1, fraction));
   $(id).style.strokeDasharray = (ARC_LEN * f) + ' ' + ARC_C;
+  $(id).style.opacity = f > 0 ? 1 : 0;   // no leftover dot at zero
 }
 
 function signalBars(rssi) {
@@ -1542,12 +1546,53 @@ $('alarmOk').addEventListener('click', () => {
 // DASHBOARD
 // =====================================================
 
-let state = null;
-let stateAt = 0;
+let state = null;      // latest LIVE reading only; null when the device is offline
+let stateAt = 0;       // when that reading arrived
 let deviceStatus = '';
-let live = false;     // true only after a fresh (non-retained) reading arrives
-let ageKnown = false; // false when showing a broker-saved reading of unknown age
-let client = null;    // MQTT connection, set up below
+let connectedAt = 0;   // when the broker connection opened
+let client = null;     // MQTT connection, set up below
+
+const SEEN_KEY = 'smartlab-last-seen';
+let lastSeenAt = store(SEEN_KEY) || 0;   // only a time, never sensor values
+
+// Older versions cached full readings; remove them so old values never appear.
+try { localStorage.removeItem(STATE_KEY); } catch (e) { /* storage unavailable */ }
+
+// Cards show "--" whenever there is no live reading.
+function showNoData() {
+  $('temp').textContent = '--';
+  setArc('tempArc', 0);
+  $('tempSub').textContent = 'No data';
+  $('hum').textContent = '--';
+  setArc('humArc', 0);
+  $('humSub').textContent = 'No data';
+
+  $('mq2').textContent = '--';
+  $('mq2Bar').style.width = '0';
+  $('mq2Mark').hidden = true;
+  $('gasTag').className = 'tag';
+  $('gasTag').textContent = 'NO DATA';
+  $('gasSub').textContent = '';
+  $('gasCard').classList.remove('alert-on');
+
+  $('flame').textContent = 'No data';
+  $('flame').style.color = '';
+  $('flameSub').textContent = 'Waiting for the device';
+  $('flameOrb').classList.remove('on');
+  $('flameOrb').style.cssText = 'background:var(--card-2);color:var(--muted)';
+  $('flameOrb').innerHTML = '<svg width="30" height="30"><use href="#i-off"/></svg>';
+  $('flameCard').classList.remove('alert-on');
+
+  $('people').textContent = '--';
+  $('entries').textContent = '--';
+  $('exits').textContent = '--';
+
+  $$('.wifi-icon').forEach(el => wifiSvg(el, 0));
+  $$('.wifi-name').forEach(el => { el.textContent = '—'; });
+  $('rssiText').textContent = '—';
+  $('uptimeText').textContent = '—';
+  $('curSignal').textContent = 'Device offline';
+}
 
 function render() {
   const d = state;
@@ -1570,6 +1615,7 @@ function render() {
   $('mq2').textContent = d.mq2Raw;
   $('mq2Bar').style.width = Math.min(100, 100 * d.mq2Raw / max) + '%';
   $('mq2Bar').style.background = d.gas ? 'var(--bad)' : d.mq2Raw > d.mq2Threshold * 0.75 ? 'var(--warn)' : 'var(--gas)';
+  $('mq2Mark').hidden = false;
   $('mq2Mark').style.left = (100 * d.mq2Threshold / max) + '%';
   $('mq2Mark').dataset.label = 'limit ' + d.mq2Threshold;
   $('gasTag').className = 'tag ' + (d.gas ? 'bad' : d.warmingUp ? 'warn' : 'ok');
@@ -1581,6 +1627,7 @@ function render() {
   $('flame').textContent = d.flame ? 'FLAME DETECTED' : 'No flame';
   $('flame').style.color = d.flame ? 'var(--bad)' : '';
   $('flameSub').textContent = d.flame ? 'Check the lab now' : 'Infrared flame detector';
+  $('flameOrb').style.cssText = '';
   $('flameOrb').classList.toggle('on', d.flame);
   $('flameOrb').innerHTML = '<svg width="30" height="30"><use href="#' + (d.flame ? 'i-fire' : 'i-check') + '"/></svg>';
   $('flameCard').classList.toggle('alert-on', d.flame);
@@ -1599,8 +1646,6 @@ function render() {
   $('uptimeText').textContent = duration(d.uptime);
 
   updateLive();
-
-  if (!live) return;   // cached reading: show it, but never raise alarms from it
 
   // Popup + notification: new alarm, or a different alarm than the one dismissed
   if (d.alarm && (!lastAlarm || (d.alert !== dismissedAlert && !$('alarmOverlay').classList.contains('open')))) {
@@ -1628,37 +1673,54 @@ function setHero(cls, icon, title, text) {
 
 function updateLive() {
   const chip = $('liveChip');
-  const age = Date.now() - stateAt;
-  const stale = !live || age > 10000;
+  const now = Date.now();
+
+  // No live reading for 10 s: the device is offline, so clear every value.
+  if (state && now - stateAt > 10000) {
+    state = null;
+    lastAlarm = false;
+    showNoData();
+  }
+
+  const connected = client && client.connected;
+  const stillWaiting = !state && connected && now - connectedAt < 6000;
+  if (!state && !stillWaiting && document.body.classList.contains('loading')) {
+    document.body.classList.remove('loading');
+    showNoData();
+  }
+
   const d = state;
+  const seen = lastSeenAt ? 'Last seen ' + ago(now - lastSeenAt) : 'No data received yet';
 
   // Status chip
   if (!navigator.onLine) {
-    chip.className = 'chip offline'; $('liveText').textContent = 'Offline';
-  } else if (!client || !client.connected) {
+    chip.className = 'chip offline'; $('liveText').textContent = 'No internet';
+  } else if (!connected) {
     chip.className = 'chip waiting'; $('liveText').textContent = 'Connecting';
-  } else if (d && !stale && deviceStatus !== 'offline') {
-    chip.className = 'chip live'; $('liveText').textContent = 'Live';
   } else if (d) {
-    chip.className = 'chip offline'; $('liveText').textContent = 'Device offline';
-  } else {
+    chip.className = 'chip live'; $('liveText').textContent = 'Live';
+  } else if (stillWaiting) {
     chip.className = 'chip waiting'; $('liveText').textContent = 'Waiting';
+  } else {
+    chip.className = 'chip offline'; $('liveText').textContent = 'Offline';
   }
 
   // Timestamps
-  const when = ageKnown ? ago(age) : 'time unknown';
-  $('updatedPill').textContent = !d ? 'No data yet' : stale ? 'Last reading ' + when : 'Updated ' + when;
-  $('updatedText').textContent = d ? when : '—';
-  $('uptimePill').hidden = !d || stale;
+  $('updatedPill').textContent = d ? 'Updated ' + ago(now - stateAt) : seen;
+  $('updatedText').textContent = d ? ago(now - stateAt) : (lastSeenAt ? ago(now - lastSeenAt) : '—');
+  $('uptimePill').hidden = !d;
   $('uptimePill').textContent = d ? 'Up ' + duration(d.uptime) : '';
-  $('deviceTag').className = 'tag ' + (d && !stale ? 'ok' : 'bad');
-  $('deviceTag').textContent = d && !stale ? 'ONLINE' : d ? 'OFFLINE' : '—';
+  $('deviceTag').className = 'tag ' + (d ? 'ok' : 'bad');
+  $('deviceTag').textContent = d ? 'ONLINE' : 'OFFLINE';
 
   // Hero
-  if (!d) {
-    setHero('', 'i-clock', 'Connecting…', 'Waiting for the first reading from the lab.');
-  } else if (stale) {
-    setHero('', 'i-off', 'Device offline', 'Showing the last known reading (' + when + ').');
+  if (!navigator.onLine) {
+    setHero('', 'i-off', 'You are offline', 'Connect to the internet to see live readings.');
+  } else if (!d && (!connected || stillWaiting)) {
+    setHero('', 'i-clock', 'Connecting…', 'Waiting for live data from the lab.');
+  } else if (!d) {
+    setHero('', 'i-off', 'Device offline',
+      (lastSeenAt ? seen + '. ' : '') + 'Check that the ESP32 is powered and on Wi-Fi.');
   } else if (d.alarm) {
     setHero('bad', 'i-alert', 'Emergency!', d.alert);
   } else if (d.warmingUp) {
@@ -1679,15 +1741,6 @@ function updateOnline() {
 window.addEventListener('online', updateOnline);
 window.addEventListener('offline', updateOnline);
 
-// Show the last saved reading instantly (also works offline).
-const cached = store(STATE_KEY);
-if (cached && cached.d) {
-  state = cached.d;
-  stateAt = cached.at;
-  ageKnown = true;
-  render();
-}
-
 // =====================================================
 // MQTT
 // =====================================================
@@ -1703,6 +1756,7 @@ if (typeof mqtt === 'undefined') {
   });
 
   client.on('connect', () => {
+    connectedAt = Date.now();
     client.subscribe(TOPIC + '/#');
     updateLive();
     // Wi-Fi panel opened before the broker connected: scan now.
@@ -1716,29 +1770,20 @@ if (typeof mqtt === 'undefined') {
     try { data = JSON.parse(payload.toString()); } catch (e) { data = payload.toString(); }
 
     if (topic === TOPIC + '/state') {
-      if (packet.retain) {
-        // The broker's saved copy of the last reading: could be hours old.
-        if (live) return;
-        const same = cached && cached.d && cached.d.uptime === data.uptime;
-        state = data;
-        ageKnown = !!same;
-        stateAt = same ? cached.at : 0;
-        render();
-        return;
-      }
+      // The broker also keeps a saved copy of the last reading, which may be
+      // hours old. Only live readings are shown.
+      if (packet.retain) return;
+
       state = data;
-      stateAt = Date.now();
-      live = true;
-      ageKnown = true;
-      // Fresh data proves the device is online, even if an old "offline" is retained.
+      stateAt = lastSeenAt = Date.now();
       deviceStatus = 'online';
-      store(STATE_KEY, { d: data, at: stateAt });
+      store(SEEN_KEY, lastSeenAt);
       render();
     } else if (topic === TOPIC + '/status') {
       deviceStatus = data;
       updateLive();
     } else if (topic === TOPIC + '/wifi') {
-      renderNetworks(data);
+      if (!packet.retain) renderNetworks(data);
     } else if (topic === TOPIC + '/ack') {
       handleAck(data);
     }
