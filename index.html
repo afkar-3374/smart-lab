@@ -1545,8 +1545,9 @@ $('alarmOk').addEventListener('click', () => {
 let state = null;
 let stateAt = 0;
 let deviceStatus = '';
-let live = false;
-let client = null;   // MQTT connection, set up below
+let live = false;     // true only after a fresh (non-retained) reading arrives
+let ageKnown = false; // false when showing a broker-saved reading of unknown age
+let client = null;    // MQTT connection, set up below
 
 function render() {
   const d = state;
@@ -1645,8 +1646,9 @@ function updateLive() {
   }
 
   // Timestamps
-  $('updatedPill').textContent = d ? 'Updated ' + ago(age) : 'No data yet';
-  $('updatedText').textContent = d ? ago(age) : '—';
+  const when = ageKnown ? ago(age) : 'time unknown';
+  $('updatedPill').textContent = !d ? 'No data yet' : stale ? 'Last reading ' + when : 'Updated ' + when;
+  $('updatedText').textContent = d ? when : '—';
   $('uptimePill').hidden = !d || stale;
   $('uptimePill').textContent = d ? 'Up ' + duration(d.uptime) : '';
   $('deviceTag').className = 'tag ' + (d && !stale ? 'ok' : 'bad');
@@ -1656,7 +1658,7 @@ function updateLive() {
   if (!d) {
     setHero('', 'i-clock', 'Connecting…', 'Waiting for the first reading from the lab.');
   } else if (stale) {
-    setHero('', 'i-off', 'Device offline', 'Last reading ' + ago(age) + '. Showing saved values.');
+    setHero('', 'i-off', 'Device offline', 'Showing the last known reading (' + when + ').');
   } else if (d.alarm) {
     setHero('bad', 'i-alert', 'Emergency!', d.alert);
   } else if (d.warmingUp) {
@@ -1682,6 +1684,7 @@ const cached = store(STATE_KEY);
 if (cached && cached.d) {
   state = cached.d;
   stateAt = cached.at;
+  ageKnown = true;
   render();
 }
 
@@ -1708,14 +1711,25 @@ if (typeof mqtt === 'undefined') {
 
   client.on('close', updateLive);
 
-  client.on('message', (topic, payload) => {
+  client.on('message', (topic, payload, packet) => {
     let data;
     try { data = JSON.parse(payload.toString()); } catch (e) { data = payload.toString(); }
 
     if (topic === TOPIC + '/state') {
+      if (packet.retain) {
+        // The broker's saved copy of the last reading: could be hours old.
+        if (live) return;
+        const same = cached && cached.d && cached.d.uptime === data.uptime;
+        state = data;
+        ageKnown = !!same;
+        stateAt = same ? cached.at : 0;
+        render();
+        return;
+      }
       state = data;
       stateAt = Date.now();
       live = true;
+      ageKnown = true;
       // Fresh data proves the device is online, even if an old "offline" is retained.
       deviceStatus = 'online';
       store(STATE_KEY, { d: data, at: stateAt });
