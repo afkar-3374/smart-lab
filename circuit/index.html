@@ -1,16 +1,29 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-root="../">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>SMART LAB Circuit</title>
 <meta name="description" content="Wiring and circuit details for the SMART LAB ESP32 monitoring system.">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#0a0f1c" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f2f5fb" media="(prefers-color-scheme: light)">
+<link rel="icon" href="../assets/icons/icon.svg" type="image/svg+xml">
+<link rel="icon" href="../assets/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="../assets/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SMART LAB">
+<script src="../assets/pwa.js" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/site.css">
 <style>
 .diagram-scroll { overflow-x: auto; margin: 0 -4px; }
+.swipe-hint { display: none; text-align: center; font-size: 12px; color: var(--muted); margin-top: 8px; }
+@media (max-width: 760px) { .swipe-hint { display: block; } }
 .diagram { display: block; width: 100%; min-width: 760px; height: auto; }
 
 .diagram text { font-family: Inter, system-ui, sans-serif; fill: var(--text); }
@@ -35,6 +48,7 @@
       <h1>SMART LAB · Circuit</h1>
       <p>How every sensor connects to the ESP32</p>
     </div>
+    <button class="install" data-install hidden>Install app</button>
     <nav class="nav">
       <a href="../">Dashboard</a>
       <a href="./" class="on">Circuit</a>
@@ -146,6 +160,7 @@
         <text x="648" y="460" font-size="11" class="muted">3V3 → DHT22, flame, IR A, IR B</text>
       </svg>
     </div>
+    <div class="swipe-hint">← Swipe to see the whole diagram →</div>
   </div>
 
   <!-- Per-sensor tables -->
@@ -251,5 +266,22 @@
 
   <div class="foot">SMART LAB · <a href="../">Dashboard</a> · <a href="../code/">Code</a> · <a href="https://github.com/afkar-3374/smart-lab">GitHub</a></div>
 </div>
+<!-- Bottom tab bar (phones) -->
+<nav class="tabbar" aria-label="App">
+  <div class="tabbar-in">
+    <a href="../"><svg width="22" height="22" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>Home</a>
+    <a href="../circuit/" class="on"><svg width="22" height="22" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M7 3h10v18H7zM4 7h3M4 12h3M4 17h3M17 7h3M17 12h3M17 17h3"/></svg>Circuit</a>
+    <a href="../code/"><svg width="22" height="22" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M8 7l-5 5 5 5M16 7l5 5-5 5M14 4l-4 16"/></svg>Code</a>
+  </div>
+</nav>
+<script>
+// On narrow screens, start the diagram centred on the ESP32 board.
+(function () {
+  const box = document.querySelector('.diagram-scroll');
+  if (box && box.scrollWidth > box.clientWidth) {
+    box.scrollLeft = (box.scrollWidth - box.clientWidth) / 2;
+  }
+})();
+</script>
 </body>
 </html>

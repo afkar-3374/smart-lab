@@ -1,0 +1,37 @@
+{
+  "name": "SMART LAB",
+  "short_name": "SMART LAB",
+  "description": "Live laboratory monitoring: temperature, humidity, gas, flame and people count, with alarms.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0a0f1c",
+  "theme_color": "#0a0f1c",
+  "categories": ["utilities", "education", "productivity"],
+  "icons": [
+    { "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "assets/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Circuit details",
+      "short_name": "Circuit",
+      "url": "./circuit/",
+      "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Code & download",
+      "short_name": "Code",
+      "url": "./code/",
+      "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "screenshots": [
+    { "src": "assets/screens/phone.png", "sizes": "780x1688", "type": "image/png", "form_factor": "narrow", "label": "Live dashboard" },
+    { "src": "assets/screens/desktop.png", "sizes": "1280x800", "type": "image/png", "form_factor": "wide", "label": "Live dashboard on desktop" }
+  ]
+}

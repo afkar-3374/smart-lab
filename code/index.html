@@ -1,10 +1,21 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-root="../">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>SMART LAB Code</title>
 <meta name="description" content="ESP32 Arduino firmware for SMART LAB, with download.">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#0a0f1c" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f2f5fb" media="(prefers-color-scheme: light)">
+<link rel="icon" href="../assets/icons/icon.svg" type="image/svg+xml">
+<link rel="icon" href="../assets/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="../assets/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SMART LAB">
+<script src="../assets/pwa.js" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -100,6 +111,7 @@
       <h1>SMART LAB · Code</h1>
       <p>ESP32 Arduino firmware</p>
     </div>
+    <button class="install" data-install hidden>Install app</button>
     <nav class="nav">
       <a href="../">Dashboard</a>
       <a href="../circuit/">Circuit</a>
@@ -250,5 +262,13 @@ $('dlZip').addEventListener('click', async () => {
   download('smart_lab_mqtt.zip', await zip.generateAsync({ type: 'blob' }));
 });
 </script>
+<!-- Bottom tab bar (phones) -->
+<nav class="tabbar" aria-label="App">
+  <div class="tabbar-in">
+    <a href="../"><svg width="22" height="22" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>Home</a>
+    <a href="../circuit/"><svg width="22" height="22" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M7 3h10v18H7zM4 7h3M4 12h3M4 17h3M17 7h3M17 12h3M17 17h3"/></svg>Circuit</a>
+    <a href="../code/" class="on"><svg width="22" height="22" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M8 7l-5 5 5 5M16 7l5 5-5 5M14 4l-4 16"/></svg>Code</a>
+  </div>
+</nav>
 </body>
 </html>

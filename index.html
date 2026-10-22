@@ -1,10 +1,22 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-root="./">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0a0f1c">
 <title>SMART LAB</title>
+<meta name="description" content="Live laboratory monitoring: temperature, humidity, gas, flame and people count, with alarms.">
+
+<!-- App (PWA) -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0a0f1c" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f2f5fb" media="(prefers-color-scheme: light)">
+<link rel="icon" href="assets/icons/icon.svg" type="image/svg+xml">
+<link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SMART LAB">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,16 +24,19 @@
 
 <script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="assets/pwa.js" defer></script>
 
 <style>
 :root {
   --bg: #0a0f1c;
+  --bg-2: #0e1526;
   --card: #121a2b;
   --card-2: #182238;
   --line: #233150;
   --text: #eef3ff;
   --muted: #8d9bb8;
   --accent: #4f8cff;
+  --accent-2: #7c5cff;
   --temp: #ff8a4c;
   --hum: #38bdf8;
   --gas: #a78bfa;
@@ -30,159 +45,285 @@
   --warn: #f59e0b;
   --bad: #ef4444;
   --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-  --radius: 20px;
+  --radius: 22px;
+  --tabbar-h: 64px;
+  --glass: rgba(10, 15, 28, 0.78);
 }
 
 @media (prefers-color-scheme: light) {
   :root {
     --bg: #f2f5fb;
+    --bg-2: #e9eef8;
     --card: #ffffff;
-    --card-2: #f4f7fc;
+    --card-2: #f3f6fc;
     --line: #e1e7f2;
     --text: #0f172a;
     --muted: #64748b;
-    --shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+    --shadow: 0 8px 24px rgba(15, 23, 42, 0.07);
+    --glass: rgba(242, 245, 251, 0.82);
   }
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
+html { scroll-behavior: smooth; }
+
 body {
   margin: 0;
   font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  background: var(--bg);
+  background:
+    radial-gradient(1200px 500px at 10% -10%, rgba(79, 140, 255, 0.12), transparent 60%),
+    radial-gradient(900px 400px at 110% 0%, rgba(124, 92, 255, 0.10), transparent 60%),
+    var(--bg);
+  background-attachment: fixed;
   color: var(--text);
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
 }
 
 button { font: inherit; color: inherit; }
+a { color: inherit; }
 
-.wrap {
-  max-width: 1100px;
-  margin: auto;
-  padding: 16px 16px calc(24px + env(safe-area-inset-bottom));
+.num { font-variant-numeric: tabular-nums; }
+
+/* =============== App bar =============== */
+
+.appbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: var(--glass);
+  backdrop-filter: saturate(160%) blur(14px);
+  -webkit-backdrop-filter: saturate(160%) blur(14px);
+  border-bottom: 1px solid var(--line);
+  padding-top: env(safe-area-inset-top);
 }
 
-/* ---------- Top bar ---------- */
-
-.topbar {
+.appbar-in {
+  max-width: 1180px;
+  margin: auto;
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 16px;
+  padding: 12px 16px;
 }
 
 .logo {
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
-  display: grid;
-  place-items: center;
-  background: linear-gradient(135deg, #4f8cff, #7c5cff);
-  color: #fff;
+  width: 40px;
+  height: 40px;
+  border-radius: 13px;
   flex: 0 0 auto;
+  display: block;
+  box-shadow: 0 6px 16px rgba(79, 140, 255, 0.35);
 }
 
 .brand { flex: 1; min-width: 0; }
-.brand h1 { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: 0.3px; white-space: nowrap; }
-.brand p { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
+.brand h1 { margin: 0; font-size: 18px; font-weight: 800; letter-spacing: 0.2px; white-space: nowrap; }
+.brand p { margin: 1px 0 0; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.topnav { display: flex; gap: 4px; margin-right: 6px; }
+
+.topnav a {
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.topnav a.on { color: var(--text); background: var(--card-2); }
+.topnav a:not(.on):hover { color: var(--text); }
 
 .chip {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 8px 12px;
+  height: 36px;
+  padding: 0 12px;
   border-radius: 999px;
   background: var(--card);
   border: 1px solid var(--line);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   white-space: nowrap;
 }
 
-.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
-.chip.live .dot { background: var(--ok); box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.18); }
+.chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.chip.live .dot { background: var(--ok); animation: live 2s infinite; }
 .chip.offline .dot { background: var(--bad); }
 .chip.waiting .dot { background: var(--warn); }
+
+@keyframes live {
+  0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.55); }
+  70% { box-shadow: 0 0 0 7px rgba(34, 197, 94, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+}
 
 .icon-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding: 8px 12px;
+  height: 36px;
+  min-width: 36px;
+  padding: 0 10px;
   border-radius: 999px;
   border: 1px solid var(--line);
   background: var(--card);
   cursor: pointer;
   font-size: 13px;
-  font-weight: 600;
-  max-width: 180px;
+  font-weight: 700;
 }
 
-.icon-btn span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .icon-btn:hover { border-color: var(--accent); }
+.icon-btn.on { color: var(--ok); }
+.icon-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.icon-btn span { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* ---------- Status banner ---------- */
+/* =============== Layout =============== */
 
-.banner {
+.wrap {
+  max-width: 1180px;
+  margin: auto;
+  padding: 18px 16px 28px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 16px;
+}
+
+.s3 { grid-column: span 3; }
+.s4 { grid-column: span 4; }
+.s6 { grid-column: span 6; }
+.s8 { grid-column: span 8; }
+.s12 { grid-column: span 12; }
+
+/* =============== Notices =============== */
+
+.notice {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 18px 20px;
-  border-radius: var(--radius);
-  margin-bottom: 16px;
-  color: #fff;
-  background: linear-gradient(135deg, #16a34a, #0d9488);
-  box-shadow: var(--shadow);
-  transition: background 0.4s;
-}
-
-.banner.warn { background: linear-gradient(135deg, #d97706, #b45309); }
-.banner.bad { background: linear-gradient(135deg, #dc2626, #9f1239); animation: pulse 1.6s infinite; }
-.banner.idle { background: linear-gradient(135deg, #475569, #334155); }
-
-@keyframes pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
-  50% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
-}
-
-.banner-icon {
-  width: 52px;
-  height: 52px;
+  gap: 12px;
+  padding: 12px 14px;
   border-radius: 16px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  border: 1px solid;
+}
+
+.notice[hidden] { display: none; }
+.notice p { margin: 0; flex: 1; }
+.notice b { display: block; }
+.notice.alerts { background: rgba(245, 158, 11, 0.1); border-color: rgba(245, 158, 11, 0.35); }
+.notice.offline { background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.35); }
+
+.notice .btn-sm {
+  border: 0;
+  border-radius: 10px;
+  padding: 9px 14px;
+  font-weight: 700;
+  font-size: 13px;
+  background: var(--warn);
+  color: #1a1203;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* =============== Hero status =============== */
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 22px;
+  border-radius: var(--radius);
+  color: #fff;
+  background: linear-gradient(135deg, #475569, #334155);
+  box-shadow: var(--shadow);
+  margin-bottom: 16px;
+  transition: background 0.5s;
+}
+
+.hero::after {
+  content: "";
+  position: absolute;
+  right: -60px;
+  top: -60px;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.hero.ok { background: linear-gradient(135deg, #16a34a, #0d9488); }
+.hero.warn { background: linear-gradient(135deg, #d97706, #b45309); }
+.hero.bad { background: linear-gradient(135deg, #dc2626, #9f1239); animation: heroPulse 1.4s infinite; }
+
+@keyframes heroPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.55), var(--shadow); }
+  50% { box-shadow: 0 0 0 12px rgba(239, 68, 68, 0), var(--shadow); }
+}
+
+.hero-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 18px;
   background: rgba(255, 255, 255, 0.18);
   display: grid;
   place-items: center;
   flex: 0 0 auto;
 }
 
-.banner h2 { margin: 0; font-size: 20px; font-weight: 800; }
-.banner p { margin: 3px 0 0; font-size: 14px; opacity: 0.9; }
+.hero-text { flex: 1; min-width: 0; position: relative; z-index: 1; }
+.hero h2 { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.2px; }
+.hero p { margin: 4px 0 0; font-size: 14px; opacity: 0.92; }
 
-/* ---------- Cards ---------- */
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 14px;
-  margin-bottom: 16px;
+.hero-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  position: relative;
+  z-index: 1;
 }
 
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* =============== Cards =============== */
+
 .card {
+  position: relative;
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 18px;
   box-shadow: var(--shadow);
-  position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.3s, box-shadow 0.3s;
 }
 
 .card-head {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 
 .card-icon {
@@ -194,101 +335,218 @@ button { font: inherit; color: inherit; }
   flex: 0 0 auto;
 }
 
-.card-title { font-size: 14px; font-weight: 600; color: var(--muted); }
+.card-title { font-size: 14px; font-weight: 700; color: var(--muted); flex: 1; }
 
-.big {
-  font-size: 34px;
+.tag {
+  font-size: 11px;
   font-weight: 800;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.3px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--card-2);
+  color: var(--muted);
+  white-space: nowrap;
 }
 
-.big small { font-size: 16px; font-weight: 600; color: var(--muted); margin-left: 3px; }
+.tag.ok { background: rgba(34, 197, 94, 0.14); color: var(--ok); }
+.tag.warn { background: rgba(245, 158, 11, 0.15); color: var(--warn); }
+.tag.bad { background: rgba(239, 68, 68, 0.15); color: var(--bad); }
+
+.card.alert-on {
+  border-color: var(--bad);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25), var(--shadow);
+}
+
+.big {
+  font-size: 40px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -1px;
+}
+
+.big small { font-size: 16px; font-weight: 700; color: var(--muted); letter-spacing: 0; margin-left: 3px; }
 
 .sub { margin-top: 8px; font-size: 13px; color: var(--muted); }
 
-/* Ring gauge */
+/* Arc gauge (270°) */
 
-.gauge-row { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
-
-.ring { width: 78px; height: 78px; flex: 0 0 auto; transform: rotate(-90deg); }
-.ring circle { fill: none; stroke-width: 8; }
-.ring .track { stroke: var(--card-2); }
-.ring .fill { stroke-linecap: round; transition: stroke-dashoffset 0.6s ease; }
-
-/* Bar */
-
-.bar {
-  height: 10px;
-  border-radius: 999px;
-  background: var(--card-2);
-  margin-top: 14px;
+.gauge {
   position: relative;
-  overflow: visible;
+  width: 100%;
+  max-width: 170px;
+  margin: 2px auto 0;
+  aspect-ratio: 1;
 }
 
-.bar-fill {
-  height: 100%;
+.gauge svg { width: 100%; height: 100%; transform: rotate(135deg); }
+.gauge circle { fill: none; stroke-width: 11; stroke-linecap: round; }
+.gauge .track { stroke: var(--card-2); }
+.gauge .fill { transition: stroke-dasharray 0.8s cubic-bezier(.2, .8, .2, 1); }
+
+.gauge-val {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-top: 6px;
+}
+
+.gauge-val .v { font-size: 34px; font-weight: 800; letter-spacing: -1px; line-height: 1; }
+.gauge-val .u { font-size: 14px; font-weight: 700; color: var(--muted); margin-left: 2px; }
+.gauge-val .l { margin-top: 6px; font-size: 12px; font-weight: 700; color: var(--muted); }
+
+.gauge-scale {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  max-width: 130px;
+  margin: -16px auto 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* Gas bar */
+
+.gas-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
+#gasCard .gas-row { margin-top: auto; }
+.gas-bottom { margin-bottom: auto; }
+
+.meter {
+  position: relative;
+  height: 14px;
+  border-radius: 999px;
+  margin-top: 18px;
+  background: linear-gradient(90deg, rgba(34, 197, 94, 0.22), rgba(245, 158, 11, 0.22) 60%, rgba(239, 68, 68, 0.25));
+}
+
+.meter-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0;
   border-radius: 999px;
   background: var(--gas);
-  width: 0;
-  transition: width 0.6s ease, background 0.3s;
+  transition: width 0.8s cubic-bezier(.2, .8, .2, 1), background 0.3s;
 }
 
-.bar-mark {
+.meter-mark {
   position: absolute;
-  top: -4px;
-  width: 2px;
-  height: 18px;
+  top: -6px;
+  width: 3px;
+  height: 26px;
+  border-radius: 3px;
   background: var(--bad);
-  border-radius: 2px;
 }
 
-/* State pill inside cards */
-
-.state {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
-  border-radius: 999px;
+.meter-mark::after {
+  content: attr(data-label);
+  position: absolute;
+  top: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
   font-weight: 700;
-  font-size: 15px;
-  background: rgba(34, 197, 94, 0.14);
-  color: var(--ok);
+  color: var(--bad);
+  white-space: nowrap;
 }
 
-.state.bad { background: rgba(239, 68, 68, 0.15); color: var(--bad); }
-.state.warn { background: rgba(245, 158, 11, 0.15); color: var(--warn); }
-
-.flow {
+.meter-legend {
   display: flex;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.flow div {
-  flex: 1;
-  padding: 8px 10px;
-  border-radius: 12px;
-  background: var(--card-2);
+  justify-content: space-between;
+  margin-top: 24px;
   font-size: 12px;
   color: var(--muted);
 }
 
-.flow b {
-  display: block;
-  font-size: 18px;
-  color: var(--text);
-  font-variant-numeric: tabular-nums;
+/* Flame */
+
+.flame-body { display: flex; align-items: center; gap: 16px; flex: 1; }
+
+.flame-orb {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  background: rgba(34, 197, 94, 0.14);
+  color: var(--ok);
+  transition: background 0.3s, color 0.3s;
 }
 
+.flame-orb.on {
+  background: rgba(239, 68, 68, 0.18);
+  color: var(--bad);
+  animation: orb 1s infinite;
+}
+
+@keyframes orb {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); transform: scale(1); }
+  50% { box-shadow: 0 0 0 12px rgba(239, 68, 68, 0); transform: scale(1.06); }
+}
+
+.flame-state { font-size: 20px; font-weight: 800; }
+
+/* People */
+
+.people-body { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex: 1; }
+.people-num { font-size: 52px; font-weight: 800; line-height: 1; letter-spacing: -1.5px; }
+.people-num + .sub { margin-top: 4px; }
+
+.flow { display: flex; flex-direction: column; gap: 8px; min-width: 120px; }
+
+.flow div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  background: var(--card-2);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.flow b { font-size: 18px; color: var(--text); }
 .flow .in b { color: var(--ok); }
 .flow .out b { color: var(--warn); }
 
-.card.alert-on { border-color: var(--bad); box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.35), var(--shadow); }
+/* Device */
 
-/* ---------- Chart ---------- */
+.kv { display: grid; gap: 10px; margin-bottom: 16px; }
+
+.kv div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.kv span { color: var(--muted); }
+.kv b { font-weight: 700; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.wide-btn {
+  width: 100%;
+  margin-top: auto;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--card-2);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.wide-btn:hover { border-color: var(--accent); }
+
+/* Chart */
 
 .chart-head {
   display: flex;
@@ -300,6 +558,7 @@ button { font: inherit; color: inherit; }
 }
 
 .chart-head h3 { margin: 0; font-size: 16px; }
+.chart-head p { margin: 2px 0 0; font-size: 12px; color: var(--muted); }
 
 .seg {
   display: inline-flex;
@@ -311,32 +570,52 @@ button { font: inherit; color: inherit; }
 .seg button {
   border: 0;
   background: transparent;
-  padding: 7px 14px;
+  padding: 7px 12px;
   border-radius: 9px;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--muted);
   cursor: pointer;
 }
 
 .seg button.on { background: var(--card); color: var(--text); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15); }
 
-.chart-box { position: relative; height: 240px; }
+.chart-box { position: relative; height: 260px; }
+
+.empty { text-align: center; color: var(--muted); padding: 22px 0; font-size: 14px; }
+
+/* Skeleton while waiting for the first reading */
+
+body.loading .skel {
+  color: transparent !important;
+  border-radius: 8px;
+  background: linear-gradient(90deg, var(--card-2) 25%, var(--line) 50%, var(--card-2) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.3s infinite;
+}
+
+body.loading .skel * { visibility: hidden; }
+
+@keyframes shimmer { to { background-position: -200% 0; } }
+
+/* Desktop links */
 
 .links {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 10px;
-  margin-top: 18px;
+  margin-top: 20px;
 }
 
 .links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   padding: 10px 16px;
   border-radius: 12px;
   background: var(--card);
   border: 1px solid var(--line);
-  color: var(--text);
   font-size: 14px;
   font-weight: 600;
   text-decoration: none;
@@ -344,49 +623,88 @@ button { font: inherit; color: inherit; }
 
 .links a:hover { border-color: var(--accent); }
 
-.foot { text-align: center; color: var(--muted); font-size: 12px; margin-top: 18px; }
+.foot { text-align: center; color: var(--muted); font-size: 12px; margin-top: 16px; }
 
-/* ---------- Overlays ---------- */
+/* =============== Bottom tab bar (phones) =============== */
+
+.tabbar {
+  display: none;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  background: var(--glass);
+  backdrop-filter: saturate(160%) blur(14px);
+  -webkit-backdrop-filter: saturate(160%) blur(14px);
+  border-top: 1px solid var(--line);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.tabbar-in { display: flex; height: var(--tabbar-h); }
+
+.tabbar a, .tabbar button {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 0;
+  background: none;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.tabbar .on { color: var(--accent); }
+
+/* =============== Overlays =============== */
 
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(3, 7, 18, 0.65);
-  backdrop-filter: blur(4px);
+  z-index: 50;
   display: none;
   align-items: center;
   justify-content: center;
   padding: 16px;
-  z-index: 50;
+  background: rgba(3, 7, 18, 0.6);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
 }
 
 .overlay.open { display: flex; }
 
 .modal {
   width: 100%;
-  max-width: 420px;
+  max-width: 440px;
   max-height: 88vh;
   overflow: auto;
   background: var(--card);
   border: 1px solid var(--line);
-  border-radius: 24px;
+  border-radius: 26px;
   padding: 24px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
   animation: pop 0.25s ease;
 }
 
 @keyframes pop {
-  from { transform: scale(0.92); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
+  from { transform: translateY(12px) scale(0.97); opacity: 0; }
+  to { transform: none; opacity: 1; }
 }
 
-/* Warning popup */
+/* Alarm */
+
+#alarmOverlay { background: rgba(127, 29, 29, 0.55); }
 
 .alarm-modal { text-align: center; border: 2px solid var(--bad); }
 
 .alarm-icon {
-  width: 84px;
-  height: 84px;
+  width: 92px;
+  height: 92px;
   border-radius: 50%;
   margin: 4px auto 16px;
   display: grid;
@@ -398,30 +716,31 @@ button { font: inherit; color: inherit; }
 
 @keyframes ring {
   0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.45); }
-  60% { box-shadow: 0 0 0 18px rgba(239, 68, 68, 0); }
+  60% { box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); }
 }
 
-.alarm-modal h2 { margin: 0; color: var(--bad); font-size: 24px; font-weight: 800; }
+.alarm-modal h2 { margin: 0; color: var(--bad); font-size: 26px; font-weight: 800; }
 .alarm-modal p { color: var(--muted); margin: 10px 0 0; line-height: 1.5; }
 
 .btn {
   width: 100%;
   margin-top: 20px;
-  padding: 14px;
+  padding: 15px;
   border: 0;
-  border-radius: 14px;
+  border-radius: 16px;
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 800;
   cursor: pointer;
   background: var(--accent);
   color: #fff;
 }
 
 .btn.red { background: var(--bad); }
-.btn.ghost { background: var(--card-2); color: var(--text); }
 .btn:disabled { opacity: 0.55; cursor: not-allowed; }
 
 /* Wi-Fi sheet */
+
+.sheet-handle { display: none; }
 
 .sheet-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
 .sheet-head h2 { margin: 0; font-size: 20px; }
@@ -442,7 +761,7 @@ button { font: inherit; color: inherit; }
   align-items: center;
   gap: 12px;
   padding: 14px;
-  border-radius: 14px;
+  border-radius: 16px;
   background: var(--card-2);
   margin: 14px 0;
 }
@@ -455,12 +774,12 @@ button { font: inherit; color: inherit; }
   align-items: center;
   justify-content: space-between;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--muted);
   margin: 6px 0 8px;
 }
 
-.link { border: 0; background: none; color: var(--accent); font-weight: 600; cursor: pointer; padding: 4px; }
+.link { border: 0; background: none; color: var(--accent); font-weight: 700; cursor: pointer; padding: 4px; }
 
 .net {
   width: 100%;
@@ -478,11 +797,9 @@ button { font: inherit; color: inherit; }
 .net:hover { background: var(--card-2); }
 .net.sel { border-color: var(--accent); background: var(--card-2); }
 .net .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
-.net .tag { font-size: 12px; color: var(--accent); font-weight: 600; }
+.net .ntag { font-size: 12px; color: var(--accent); font-weight: 700; }
 
-.pass-box { margin-top: 10px; }
-
-.pass-row { display: flex; gap: 8px; margin-top: 8px; }
+.pass-row { display: flex; gap: 8px; margin-top: 10px; }
 
 .pass-row input {
   flex: 1;
@@ -501,8 +818,6 @@ button { font: inherit; color: inherit; }
 .msg.ok { color: var(--ok); }
 .msg.bad { color: var(--bad); }
 .msg.wait { color: var(--warn); }
-
-.empty { text-align: center; color: var(--muted); padding: 22px 0; font-size: 14px; }
 
 .spinner {
   width: 18px;
@@ -524,7 +839,7 @@ button { font: inherit; color: inherit; }
   position: fixed;
   left: 50%;
   bottom: calc(20px + env(safe-area-inset-bottom));
-  transform: translateX(-50%) translateY(120px);
+  transform: translateX(-50%) translateY(16px);
   background: var(--card);
   border: 1px solid var(--line);
   box-shadow: var(--shadow);
@@ -532,62 +847,84 @@ button { font: inherit; color: inherit; }
   border-radius: 14px;
   font-size: 14px;
   font-weight: 600;
-  transition: transform 0.3s ease, opacity 0.3s, visibility 0.3s;
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
+  transition: transform 0.3s ease, opacity 0.3s, visibility 0.3s;
   z-index: 60;
   max-width: calc(100% - 32px);
 }
 
-.sound-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  margin-bottom: 16px;
-  padding: 12px;
-  border: 1px dashed var(--warn);
-  border-radius: 14px;
-  background: rgba(245, 158, 11, 0.1);
-  color: var(--warn);
-  font-weight: 700;
-  font-size: 14px;
-  cursor: pointer;
+.toast.show { transform: translateX(-50%); opacity: 1; visibility: visible; }
+
+/* =============== Responsive =============== */
+
+@media (max-width: 1000px) {
+  .s3 { grid-column: span 6; }
+  .s4 { grid-column: span 6; }
+  .s6, .s8 { grid-column: span 12; }
+  .device-card { grid-column: span 12; }
 }
 
-.sound-btn[hidden] { display: none; }
+@media (max-width: 760px) {
+  .topnav, .desk-only { display: none !important; }
+  .tabbar { display: block; }
+  body { padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom)); }
+  .toast { bottom: calc(var(--tabbar-h) + 16px + env(safe-area-inset-bottom)); }
+  .links { display: none; }
 
-.toast.show { transform: translateX(-50%) translateY(0); opacity: 1; visibility: visible; }
+  /* Wi-Fi panel becomes a bottom sheet */
+  #wifiOverlay { align-items: flex-end; padding: 0; }
+  #wifiOverlay .modal {
+    max-width: none;
+    border-radius: 26px 26px 0 0;
+    padding-bottom: calc(24px + env(safe-area-inset-bottom));
+    animation: sheet 0.28s ease;
+  }
+  .sheet-handle { display: block; width: 42px; height: 5px; border-radius: 3px; background: var(--line); margin: -10px auto 14px; }
+}
 
-/* Landscape phones: tighter cards, chart beside nothing wasted */
+@keyframes sheet { from { transform: translateY(100%); } to { transform: none; } }
+
+@media (max-width: 560px) {
+  .s4 { grid-column: span 12; }
+  .wrap { padding: 14px 12px 20px; }
+  .grid { gap: 12px; }
+  .card { padding: 15px; border-radius: 20px; }
+  .hero { padding: 18px; gap: 14px; flex-wrap: wrap; }
+  .hero-icon { width: 50px; height: 50px; border-radius: 15px; }
+  .hero h2 { font-size: 21px; }
+  .hero-meta { flex-direction: row; align-items: center; width: 100%; }
+  .brand p { display: none; }
+  .gauge-val .v { font-size: 28px; }
+  .big { font-size: 34px; }
+  .people-num { font-size: 44px; }
+  .flow { min-width: 108px; }
+  .chart-box { height: 220px; }
+  .card-title { font-size: 13px; }
+}
+
+@media (max-width: 380px) {
+  .s3 { grid-column: span 12; }
+  .gauge { max-width: 150px; }
+}
+
+/* Short landscape phones */
 @media (max-height: 500px) and (orientation: landscape) {
-  .big { font-size: 28px; }
-  .ring { width: 64px; height: 64px; }
+  .s3 { grid-column: span 3; }
   .chart-box { height: 200px; }
 }
 
-@media (max-width: 420px) {
-  .grid { grid-template-columns: 1fr 1fr; gap: 10px; }
-  #gasCard { grid-column: span 2; }
-  .topbar { gap: 8px; }
-  .logo { width: 38px; height: 38px; border-radius: 12px; }
-  .brand h1 { font-size: 18px; }
-  .card { padding: 14px; }
-  .big { font-size: 28px; }
-  .ring { width: 64px; height: 64px; }
-  .brand p { display: none; }
-  .icon-btn span { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 </style>
 </head>
 
-<body>
+<body class="loading">
 
-<!-- Reusable icons -->
-<svg width="0" height="0" style="position:absolute">
-  <symbol id="i-flask" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 3h6M10 3v6L4.5 18.5A1.7 1.7 0 0 0 6 21h12a1.7 1.7 0 0 0 1.5-2.5L14 9V3M7 15h10"/></symbol>
+<!-- Icons -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <symbol id="i-temp" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M14 14.8V4a2 2 0 1 0-4 0v10.8a4 4 0 1 0 4 0zM12 11v6"/></symbol>
   <symbol id="i-drop" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></symbol>
   <symbol id="i-gas" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M3 8h11a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h8"/></symbol>
@@ -598,126 +935,222 @@ button { font: inherit; color: inherit; }
   <symbol id="i-clock" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2"/></symbol>
   <symbol id="i-off" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M2 2l20 20M8.5 16.4a5 5 0 0 1 7 0M5 12.9a10 10 0 0 1 5.2-2.8M19 12.9a10 10 0 0 0-2-1.5M2 8.8a15 15 0 0 1 4.2-2.6M22 8.8A15 15 0 0 0 11 5M12 20h.01"/></symbol>
   <symbol id="i-lock" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/></symbol>
   <symbol id="i-x" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8M10 20a2 2 0 0 0 4 0"/></symbol>
+  <symbol id="i-bell-off" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M2 2l20 20M8.7 3.6A6 6 0 0 1 18 8c0 3 .6 5 1.3 6.3M17 16H3s3-1 3-8M10 20a2 2 0 0 0 4 0"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0-5-5m5 5 5-5M4 21h16"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-circuit" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M7 3h10v18H7zM4 7h3M4 12h3M4 17h3M17 7h3M17 12h3M17 17h3"/></symbol>
+  <symbol id="i-code" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M8 7l-5 5 5 5M16 7l5 5-5 5M14 4l-4 16"/></symbol>
+  <symbol id="i-chip" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M7 7h10v10H7zM10 2v3M14 2v3M10 19v3M14 19v3M2 10h3M2 14h3M19 10h3M19 14h3"/></symbol>
+  <symbol id="i-up" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M12 19V5M5 12l7-7 7 7"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12l7 7 7-7"/></symbol>
 </svg>
 
-<div class="wrap">
-
-  <!-- Top bar -->
-  <div class="topbar">
-    <div class="logo"><svg width="24" height="24"><use href="#i-flask"/></svg></div>
+<!-- App bar -->
+<header class="appbar">
+  <div class="appbar-in">
+    <img class="logo" src="assets/icons/icon.svg" alt="" width="40" height="40">
     <div class="brand">
       <h1>SMART LAB</h1>
-      <p>Laboratory Monitoring &amp; Safety</p>
+      <p id="subtitle">Laboratory Monitoring &amp; Safety</p>
     </div>
-    <div class="chip waiting" id="liveChip"><span class="dot"></span><span id="liveText">Connecting</span></div>
-    <button class="icon-btn" id="wifiOpen" aria-label="Wi-Fi settings">
-      <svg width="20" height="20" viewBox="0 0 24 24" id="wifiIconTop"></svg>
-      <span id="wifiName">Wi-Fi</span>
+
+    <nav class="topnav" aria-label="Pages">
+      <a href="./" class="on">Dashboard</a>
+      <a href="circuit/">Circuit</a>
+      <a href="code/">Code</a>
+    </nav>
+
+    <button class="icon-btn primary" data-install hidden aria-label="Install app">
+      <svg width="16" height="16"><use href="#i-download"/></svg><span class="desk-only">Install</span>
     </button>
+    <button class="icon-btn" id="alertBtn" aria-label="Alarm sound and notifications">
+      <svg width="18" height="18" id="alertIcon"><use href="#i-bell-off"/></svg>
+    </button>
+    <button class="icon-btn desk-only" id="wifiTop" aria-label="Wi-Fi settings">
+      <svg width="18" height="18" viewBox="0 0 24 24" class="wifi-icon"></svg>
+      <span class="wifi-name">Wi-Fi</span>
+    </button>
+    <div class="chip waiting" id="liveChip" role="status"><span class="dot"></span><span id="liveText">Connecting</span></div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- Notices -->
+  <div class="notice offline" id="offlineNotice" hidden>
+    <svg width="22" height="22" style="color:var(--bad);flex:0 0 auto"><use href="#i-off"/></svg>
+    <p><b>You're offline</b>Showing the last readings saved on this device.</p>
   </div>
 
-  <!-- Browsers block sound until the page is tapped once -->
-  <button class="sound-btn" id="soundBtn">🔔 Tap to enable alarm sound</button>
+  <div class="notice alerts" id="alertsNotice" hidden>
+    <svg width="22" height="22" style="color:var(--warn);flex:0 0 auto"><use href="#i-bell"/></svg>
+    <p><b>Turn on alerts</b>Hear a siren and get a notification if flame or gas is detected.</p>
+    <button class="btn-sm" id="alertsEnable">Enable</button>
+  </div>
 
   <!-- Overall status -->
-  <div class="banner idle" id="banner">
-    <div class="banner-icon"><svg width="28" height="28" id="bannerIcon"><use href="#i-clock"/></svg></div>
-    <div>
-      <h2 id="bannerTitle">Waiting for SMART LAB</h2>
-      <p id="bannerText">Connecting to the device...</p>
+  <section class="hero" id="hero" aria-live="polite">
+    <div class="hero-icon"><svg width="30" height="30" id="heroIcon"><use href="#i-clock"/></svg></div>
+    <div class="hero-text">
+      <h2 id="heroTitle">Connecting…</h2>
+      <p id="heroText">Waiting for the first reading from the lab.</p>
     </div>
-  </div>
+    <div class="hero-meta">
+      <span class="pill num" id="updatedPill">—</span>
+      <span class="pill num" id="uptimePill" hidden></span>
+    </div>
+  </section>
 
-  <!-- Sensor cards -->
   <div class="grid">
 
-    <div class="card">
+    <!-- Temperature -->
+    <section class="card s3">
       <div class="card-head">
         <div class="card-icon" style="background:rgba(255,138,76,.15);color:var(--temp)"><svg width="20" height="20"><use href="#i-temp"/></svg></div>
         <div class="card-title">Temperature</div>
       </div>
-      <div class="gauge-row">
-        <svg class="ring" viewBox="0 0 80 80"><circle class="track" cx="40" cy="40" r="34"/><circle class="fill" id="tempRing" cx="40" cy="40" r="34" stroke="var(--temp)"/></svg>
-        <div>
-          <div class="big"><span id="temp">--</span><small>°C</small></div>
-          <div class="sub" id="tempSub">--</div>
+      <div class="gauge">
+        <svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="50"/><circle class="fill" id="tempArc" cx="60" cy="60" r="50" stroke="var(--temp)"/></svg>
+        <div class="gauge-val">
+          <div class="skel"><span class="v num" id="temp">--</span><span class="u">°C</span></div>
+          <div class="l" id="tempSub">&nbsp;</div>
         </div>
       </div>
-    </div>
+      <div class="gauge-scale"><span>0</span><span>50 °C</span></div>
+    </section>
 
-    <div class="card">
+    <!-- Humidity -->
+    <section class="card s3">
       <div class="card-head">
         <div class="card-icon" style="background:rgba(56,189,248,.15);color:var(--hum)"><svg width="20" height="20"><use href="#i-drop"/></svg></div>
         <div class="card-title">Humidity</div>
       </div>
-      <div class="gauge-row">
-        <svg class="ring" viewBox="0 0 80 80"><circle class="track" cx="40" cy="40" r="34"/><circle class="fill" id="humRing" cx="40" cy="40" r="34" stroke="var(--hum)"/></svg>
-        <div>
-          <div class="big"><span id="hum">--</span><small>%</small></div>
-          <div class="sub" id="humSub">--</div>
+      <div class="gauge">
+        <svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="50"/><circle class="fill" id="humArc" cx="60" cy="60" r="50" stroke="var(--hum)"/></svg>
+        <div class="gauge-val">
+          <div class="skel"><span class="v num" id="hum">--</span><span class="u">%</span></div>
+          <div class="l" id="humSub">&nbsp;</div>
         </div>
       </div>
-    </div>
+      <div class="gauge-scale"><span>0</span><span>100 %</span></div>
+    </section>
 
-    <div class="card" id="gasCard">
+    <!-- Gas -->
+    <section class="card s6" id="gasCard">
       <div class="card-head">
         <div class="card-icon" style="background:rgba(167,139,250,.15);color:var(--gas)"><svg width="20" height="20"><use href="#i-gas"/></svg></div>
-        <div class="card-title">Gas / Smoke</div>
+        <div class="card-title">Gas / Smoke · MQ-2</div>
+        <span class="tag" id="gasTag">—</span>
       </div>
-      <div class="big" id="mq2">--</div>
-      <div class="bar"><div class="bar-fill" id="mq2Bar"></div><div class="bar-mark" id="mq2Mark"></div></div>
-      <div class="sub" id="gasSub">--</div>
-    </div>
+      <div class="gas-row">
+        <div class="big num skel" id="mq2">----</div>
+        <div class="sub" id="gasSub" style="margin:0 0 4px">&nbsp;</div>
+      </div>
+      <div class="gas-bottom">
+        <div class="meter">
+          <div class="meter-fill" id="mq2Bar"></div>
+          <div class="meter-mark" id="mq2Mark" data-label="limit"></div>
+        </div>
+        <div class="meter-legend"><span>Clean air</span><span>Danger</span></div>
+      </div>
+    </section>
 
-    <div class="card" id="flameCard">
+    <!-- Flame -->
+    <section class="card s4" id="flameCard">
       <div class="card-head">
         <div class="card-icon" style="background:rgba(239,68,68,.15);color:var(--bad)"><svg width="20" height="20"><use href="#i-fire"/></svg></div>
         <div class="card-title">Flame Sensor</div>
       </div>
-      <div class="state" id="flame">--</div>
-      <div class="sub">Infrared flame detector</div>
-    </div>
+      <div class="flame-body">
+        <div class="flame-orb" id="flameOrb"><svg width="30" height="30"><use href="#i-fire"/></svg></div>
+        <div>
+          <div class="flame-state skel" id="flame">No flame</div>
+          <div class="sub" id="flameSub">Infrared flame detector</div>
+        </div>
+      </div>
+    </section>
 
-    <div class="card">
+    <!-- People -->
+    <section class="card s4">
       <div class="card-head">
         <div class="card-icon" style="background:rgba(52,211,153,.15);color:var(--people)"><svg width="20" height="20"><use href="#i-people"/></svg></div>
         <div class="card-title">People in Lab</div>
       </div>
-      <div class="big" id="people">--</div>
-      <div class="flow">
-        <div class="in">↑ Entries<b id="entries">--</b></div>
-        <div class="out">↓ Exits<b id="exits">--</b></div>
+      <div class="people-body">
+        <div>
+          <div class="people-num num skel" id="people">0</div>
+          <div class="sub">inside now</div>
+        </div>
+        <div class="flow">
+          <div class="in"><span><svg width="12" height="12"><use href="#i-up"/></svg> Entries</span><b class="num" id="entries">--</b></div>
+          <div class="out"><span><svg width="12" height="12"><use href="#i-down"/></svg> Exits</span><b class="num" id="exits">--</b></div>
+        </div>
       </div>
-    </div>
+    </section>
 
-  </div>
-
-  <!-- History chart -->
-  <div class="card">
-    <div class="chart-head">
-      <h3>History</h3>
-      <div class="seg" id="chartSeg">
-        <button class="on" data-series="temp">Temperature</button>
-        <button data-series="hum">Humidity</button>
+    <!-- Device -->
+    <section class="card s4 device-card">
+      <div class="card-head">
+        <div class="card-icon" style="background:rgba(79,140,255,.15);color:var(--accent)"><svg width="20" height="20"><use href="#i-chip"/></svg></div>
+        <div class="card-title">Device</div>
+        <span class="tag" id="deviceTag">—</span>
       </div>
-    </div>
-    <div class="chart-box"><canvas id="chart"></canvas></div>
+      <div class="kv">
+        <div><span>Wi-Fi</span><b class="wifi-name">—</b></div>
+        <div><span>Signal</span><b><svg width="16" height="16" viewBox="0 0 24 24" class="wifi-icon" style="vertical-align:-3px"></svg> <span class="num" id="rssiText" style="color:inherit">—</span></b></div>
+        <div><span>Uptime</span><b class="num" id="uptimeText">—</b></div>
+        <div><span>Last update</span><b class="num" id="updatedText">—</b></div>
+      </div>
+      <button class="wide-btn" id="wifiCard">
+        <svg width="18" height="18" viewBox="0 0 24 24" class="wifi-icon"></svg>
+        Change Wi-Fi
+      </button>
+    </section>
+
+    <!-- History -->
+    <section class="card s12">
+      <div class="chart-head">
+        <div>
+          <h3>History</h3>
+          <p>One point every 10 s · saved on this device</p>
+        </div>
+        <div class="seg" id="chartSeg" role="tablist">
+          <button class="on" data-series="temp">Temp</button>
+          <button data-series="hum">Humidity</button>
+          <button data-series="both">Both</button>
+        </div>
+      </div>
+      <div class="chart-box"><canvas id="chart" aria-label="Temperature and humidity history"></canvas></div>
+    </section>
+
   </div>
 
   <div class="links">
-    <a href="circuit/">🔌 Circuit details</a>
-    <a href="code/">💻 Code &amp; download</a>
-    <a href="https://github.com/afkar-3374/smart-lab">GitHub</a>
+    <a href="circuit/"><svg width="16" height="16"><use href="#i-circuit"/></svg> Circuit details</a>
+    <a href="code/"><svg width="16" height="16"><use href="#i-code"/></svg> Code &amp; download</a>
+    <a href="https://github.com/afkar-3374/smart-lab"><svg width="16" height="16"><use href="#i-code"/></svg> GitHub</a>
   </div>
 
-  <div class="foot">Live data every 2 s · Chart adds a point every 10 s · MQ-2 shows a raw reading, not gas concentration</div>
-</div>
+  <div class="foot">Live over MQTT · MQ-2 shows a raw reading, not gas concentration</div>
+</main>
+
+<!-- Bottom tab bar (phones) -->
+<nav class="tabbar" aria-label="App">
+  <div class="tabbar-in">
+    <a href="./" class="on"><svg width="22" height="22"><use href="#i-home"/></svg>Home</a>
+    <a href="circuit/"><svg width="22" height="22"><use href="#i-circuit"/></svg>Circuit</a>
+    <a href="code/"><svg width="22" height="22"><use href="#i-code"/></svg>Code</a>
+    <button id="wifiTab"><svg width="22" height="22" viewBox="0 0 24 24" class="wifi-icon"></svg>Wi-Fi</button>
+  </div>
+</nav>
 
 <!-- Warning popup -->
 <div class="overlay" id="alarmOverlay" role="alertdialog" aria-modal="true" aria-labelledby="alarmTitle">
   <div class="modal alarm-modal">
-    <div class="alarm-icon"><svg width="40" height="40" id="alarmIcon"><use href="#i-alert"/></svg></div>
+    <div class="alarm-icon"><svg width="44" height="44" id="alarmIcon"><use href="#i-alert"/></svg></div>
     <h2 id="alarmTitle">Warning</h2>
     <p id="alarmText">--</p>
     <p id="alarmTime" style="font-size:13px"></p>
@@ -728,15 +1161,16 @@ button { font: inherit; color: inherit; }
 <!-- Wi-Fi sheet -->
 <div class="overlay" id="wifiOverlay" role="dialog" aria-modal="true" aria-labelledby="wifiTitle">
   <div class="modal">
+    <div class="sheet-handle"></div>
     <div class="sheet-head">
       <h2 id="wifiTitle">Wi-Fi</h2>
       <button class="close" id="wifiClose" aria-label="Close"><svg width="18" height="18"><use href="#i-x"/></svg></button>
     </div>
 
     <div class="current">
-      <svg width="26" height="26" viewBox="0 0 24 24" id="wifiIconCur"></svg>
+      <svg width="26" height="26" viewBox="0 0 24 24" class="wifi-icon"></svg>
       <div>
-        <b id="curSsid">--</b>
+        <b class="wifi-name">--</b>
         <span id="curSignal">Current network</span>
       </div>
     </div>
@@ -748,11 +1182,11 @@ button { font: inherit; color: inherit; }
 
     <div id="netList"><div class="empty">Tap "Scan again" to search.</div></div>
 
-    <div class="pass-box" id="passBox" hidden>
+    <div id="passBox" hidden>
       <div class="pass-row">
         <input id="pass" type="password" placeholder="Password" maxlength="63" autocomplete="off">
         <button class="close" id="showPass" aria-label="Show password" style="width:48px;height:auto;border-radius:12px">
-          <svg width="18" height="18"><use href="#i-lock"/></svg>
+          <svg width="18" height="18"><use href="#i-eye"/></svg>
         </button>
       </div>
       <button class="btn" id="joinBtn">Connect</button>
@@ -762,7 +1196,7 @@ button { font: inherit; color: inherit; }
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status"></div>
 
 <script>
 'use strict';
@@ -774,21 +1208,60 @@ button { font: inherit; color: inherit; }
 const BROKER = 'wss://broker.hivemq.com:8884/mqtt';
 const TOPIC = 'smartlab/afkar3374-lab1';
 
+const STATE_KEY = 'smartlab-last-state';
+const HISTORY_KEY = 'smartlab-history';
+
 // =====================================================
 // HELPERS
 // =====================================================
 
 const $ = id => document.getElementById(id);
-const RING = 2 * Math.PI * 34;
+const $$ = sel => document.querySelectorAll(sel);
 
-['tempRing', 'humRing'].forEach(id => {
-  $(id).style.strokeDasharray = RING;
-  $(id).style.strokeDashoffset = RING;
-});
+function store(key, value) {
+  try {
+    if (value === undefined) return JSON.parse(localStorage.getItem(key));
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (e) {
+    return null;
+  }
+}
 
-function setRing(id, fraction) {
+function toast(text) {
+  const t = $('toast');
+  t.textContent = text;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+function ago(ms) {
+  const s = Math.max(0, Math.round(ms / 1000));
+  if (s < 5) return 'just now';
+  if (s < 60) return s + ' s ago';
+  if (s < 3600) return Math.floor(s / 60) + ' min ago';
+  if (s < 86400) return Math.floor(s / 3600) + ' h ago';
+  return Math.floor(s / 86400) + ' d ago';
+}
+
+function duration(sec) {
+  if (sec === undefined || sec === null) return '—';
+  if (sec < 60) return sec + ' s';
+  if (sec < 3600) return Math.floor(sec / 60) + ' min';
+  if (sec < 86400) return Math.floor(sec / 3600) + ' h ' + Math.floor(sec % 3600 / 60) + ' min';
+  return Math.floor(sec / 86400) + ' d ' + Math.floor(sec % 86400 / 3600) + ' h';
+}
+
+// 270° arc gauges
+const ARC_C = 2 * Math.PI * 50;
+const ARC_LEN = ARC_C * 0.75;
+
+['tempArc', 'humArc'].forEach(id => setArc(id, 0));
+$$('.gauge .track').forEach(t => t.style.strokeDasharray = ARC_LEN + ' ' + ARC_C);
+
+function setArc(id, fraction) {
   const f = Math.max(0, Math.min(1, fraction));
-  $(id).style.strokeDashoffset = RING * (1 - f);
+  $(id).style.strokeDasharray = (ARC_LEN * f) + ' ' + ARC_C;
 }
 
 function signalBars(rssi) {
@@ -811,112 +1284,183 @@ function wifiSvg(el, bars) {
     (i < bars ? 1 : 0.25) + '"/>').join('');
 }
 
-function toast(text) {
-  const t = $('toast');
-  t.textContent = text;
-  t.classList.add('show');
-  clearTimeout(t._timer);
-  t._timer = setTimeout(() => t.classList.remove('show'), 3500);
+$$('.wifi-icon').forEach(el => wifiSvg(el, 0));
+
+// =====================================================
+// HISTORY CHART (kept on this device between visits)
+// =====================================================
+
+const hist = store(HISTORY_KEY) || { t: [], temp: [], hum: [] };
+let lastChartTime = hist.t.length ? hist.t[hist.t.length - 1] : 0;
+let series = 'temp';
+let chart = null;
+
+// Drop points older than 6 hours.
+while (hist.t.length && Date.now() - hist.t[0] > 6 * 3600 * 1000) {
+  hist.t.shift(); hist.temp.shift(); hist.hum.shift();
 }
 
-wifiSvg($('wifiIconTop'), 0);
-wifiSvg($('wifiIconCur'), 0);
-
-// =====================================================
-// CHART
-// =====================================================
-
-const hist = { labels: [], temp: [], hum: [] };
-let series = 'temp';
-let lastChartTime = 0;
-let chart = null;
+const timeLabel = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+const labels = hist.t.map(timeLabel);
 
 if (typeof Chart !== 'undefined') {
   const css = getComputedStyle(document.documentElement);
   const muted = css.getPropertyValue('--muted').trim();
   const line = css.getPropertyValue('--line').trim();
 
+  const gradient = (ctx, rgb) => {
+    const area = ctx.chart.chartArea;
+    if (!area) return 'rgba(' + rgb + ',0.15)';
+    const g = ctx.chart.ctx.createLinearGradient(0, area.top, 0, area.bottom);
+    g.addColorStop(0, 'rgba(' + rgb + ',0.28)');
+    g.addColorStop(1, 'rgba(' + rgb + ',0)');
+    return g;
+  };
+
   chart = new Chart($('chart'), {
     type: 'line',
     data: {
-      labels: hist.labels,
-      datasets: [{
-        label: 'Temperature (°C)',
-        data: hist.temp,
-        borderColor: '#ff8a4c',
-        backgroundColor: 'rgba(255,138,76,0.15)',
-        fill: true,
-        tension: 0.35,
-        pointRadius: () => (hist.labels.length < 3 ? 4 : 0),
-        pointBackgroundColor: ctx => ctx.dataset.borderColor,
-        borderWidth: 2.5
-      }]
+      labels: labels,
+      datasets: [
+        {
+          label: 'Temperature (°C)',
+          data: hist.temp,
+          yAxisID: 'y',
+          borderColor: '#ff8a4c',
+          backgroundColor: ctx => gradient(ctx, '255,138,76'),
+          fill: true,
+          tension: 0.35,
+          pointRadius: () => (hist.t.length < 3 ? 4 : 0),
+          pointBackgroundColor: '#ff8a4c',
+          borderWidth: 2.5
+        },
+        {
+          label: 'Humidity (%)',
+          data: hist.hum,
+          yAxisID: 'y1',
+          hidden: true,
+          borderColor: '#38bdf8',
+          backgroundColor: ctx => gradient(ctx, '56,189,248'),
+          fill: true,
+          tension: 0.35,
+          pointRadius: () => (hist.t.length < 3 ? 4 : 0),
+          pointBackgroundColor: '#38bdf8',
+          borderWidth: 2.5
+        }
+      ]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       animation: false,
       interaction: { mode: 'index', intersect: false },
-      plugins: { legend: { display: false } },
+      plugins: {
+        legend: { display: false },
+        tooltip: { padding: 10, cornerRadius: 10, displayColors: true }
+      },
       scales: {
-        x: { ticks: { color: muted, maxTicksLimit: 6 }, grid: { display: false } },
-        y: { ticks: { color: muted }, grid: { color: line } }
+        x: { ticks: { color: muted, maxTicksLimit: 6, maxRotation: 0, autoSkipPadding: 18 }, grid: { display: false } },
+        y: { position: 'left', ticks: { color: '#ff8a4c' }, grid: { color: line } },
+        y1: { position: 'right', display: false, ticks: { color: '#38bdf8' }, grid: { drawOnChartArea: false } }
       }
     }
   });
+
+  if (!hist.t.length) $('chart').setAttribute('aria-label', 'No history yet');
 } else {
   $('chart').parentElement.innerHTML = '<div class="empty">Chart could not load.</div>';
 }
 
+function applySeries() {
+  if (!chart) return;
+  const showTemp = series !== 'hum';
+  const showHum = series !== 'temp';
+  chart.data.datasets[0].hidden = !showTemp;
+  chart.data.datasets[1].hidden = !showHum;
+  chart.options.scales.y.display = showTemp;
+  chart.options.scales.y1.display = showHum;
+  chart.options.scales.y1.position = showTemp ? 'right' : 'left';
+  chart.options.scales.y1.grid.drawOnChartArea = !showTemp;
+  chart.update();
+}
+
 $('chartSeg').addEventListener('click', e => {
   const b = e.target.closest('button');
-  if (!b || !chart) return;
+  if (!b) return;
   series = b.dataset.series;
-  document.querySelectorAll('#chartSeg button').forEach(x => x.classList.toggle('on', x === b));
-
-  const ds = chart.data.datasets[0];
-  ds.data = hist[series];
-  ds.label = series === 'temp' ? 'Temperature (°C)' : 'Humidity (%)';
-  ds.borderColor = series === 'temp' ? '#ff8a4c' : '#38bdf8';
-  ds.backgroundColor = series === 'temp' ? 'rgba(255,138,76,0.15)' : 'rgba(56,189,248,0.15)';
-  chart.update();
+  $$('#chartSeg button').forEach(x => x.classList.toggle('on', x === b));
+  applySeries();
 });
 
+function addHistoryPoint(d) {
+  const now = Date.now();
+  if (now - lastChartTime < 10000 || d.temperature === null || d.humidity === null) return;
+  lastChartTime = now;
+
+  hist.t.push(now);
+  hist.temp.push(d.temperature);
+  hist.hum.push(d.humidity);
+  labels.push(timeLabel(now));
+
+  while (hist.t.length > 360) {
+    hist.t.shift(); hist.temp.shift(); hist.hum.shift(); labels.shift();
+  }
+
+  store(HISTORY_KEY, hist);
+  if (chart) chart.update();
+}
+
 // =====================================================
-// WARNING POPUP
+// ALERTS: siren + notifications
 // =====================================================
 
-let lastAlarm = false;
-let dismissedAlert = '';
-
-// One shared audio context, unlocked by the first tap anywhere on the page.
 let audioCtx = null;
 let sirenTimer = null;
+
+function soundReady() {
+  return !!audioCtx && audioCtx.state === 'running';
+}
 
 function unlockAudio() {
   try {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    if (audioCtx.state === 'suspended') audioCtx.resume();
+    if (audioCtx.state === 'suspended') audioCtx.resume().then(updateAlertUi);
   } catch (e) { /* no audio support */ }
-  updateSoundBtn();
+  updateAlertUi();
 }
 
-function updateSoundBtn() {
-  $('soundBtn').hidden = !!audioCtx && audioCtx.state === 'running';
-}
-
+// Any tap unlocks sound (browsers block audio until the page is touched).
 ['click', 'touchstart', 'keydown'].forEach(ev =>
   document.addEventListener(ev, unlockAudio, { passive: true }));
 
-$('soundBtn').addEventListener('click', () => {
+function updateAlertUi() {
+  const notif = 'Notification' in window ? Notification.permission : 'unsupported';
+  const on = soundReady();
+  $('alertBtn').classList.toggle('on', on);
+  $('alertIcon').innerHTML = '<use href="#' + (on ? 'i-bell' : 'i-bell-off') + '"/>';
+  $('alertBtn').title = on ? 'Alerts on' + (notif === 'granted' ? ' (sound + notifications)' : ' (sound)') : 'Alerts off';
+  $('alertsNotice').hidden = on;
+}
+
+async function enableAlerts() {
   unlockAudio();
-  setTimeout(() => { beep(); updateSoundBtn(); }, 50);
-  toast('Alarm sound enabled');
-});
+  if ('Notification' in window && Notification.permission === 'default') {
+    try { await Notification.requestPermission(); } catch (e) { /* ignored */ }
+  }
+  setTimeout(() => {
+    beep();
+    updateAlertUi();
+    const n = 'Notification' in window && Notification.permission === 'granted';
+    toast(n ? 'Alerts on: siren and notifications' : 'Alarm sound enabled');
+  }, 60);
+}
+
+$('alertsEnable').addEventListener('click', enableAlerts);
+$('alertBtn').addEventListener('click', enableAlerts);
 
 // Two-tone alarm burst (about 1 s).
 function beep() {
-  if (!audioCtx || audioCtx.state !== 'running') return;
+  if (!soundReady()) return;
   const now = audioCtx.currentTime;
   [0, 0.25, 0.5, 0.75].forEach((t, i) => {
     const o = audioCtx.createOscillator();
@@ -943,12 +1487,45 @@ function stopSiren() {
   sirenTimer = null;
 }
 
-function showAlarm(d) {
-  const flame = d.flame;
-  $('alarmTitle').textContent = flame && d.gas ? 'Fire & Gas Alert!' : flame ? 'Flame Detected!' : 'Gas / Smoke Alert!';
-  $('alarmText').textContent = (flame ? 'The flame sensor has been triggered. ' : '') +
+async function notify(title, body, urgent) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  try {
+    const reg = await navigator.serviceWorker.getRegistration();
+    const opts = {
+      body: body,
+      icon: 'assets/icons/icon-192.png',
+      badge: 'assets/icons/icon-192.png',
+      tag: 'smartlab-alarm',
+      renotify: true,
+      requireInteraction: urgent,
+      vibrate: urgent ? [400, 200, 400, 200, 400] : [100]
+    };
+    if (reg) reg.showNotification(title, opts);
+    else new Notification(title, opts);
+  } catch (e) { /* notifications unavailable */ }
+}
+
+// =====================================================
+// WARNING POPUP
+// =====================================================
+
+let lastAlarm = false;
+let dismissedAlert = '';
+
+function alarmTitle(d) {
+  return d.flame && d.gas ? 'Fire & Gas Alert!' : d.flame ? 'Flame Detected!' : 'Gas / Smoke Alert!';
+}
+
+function alarmText(d) {
+  return (d.flame ? 'The flame sensor has been triggered. ' : '') +
     (d.gas ? 'Gas/smoke level is above the safe limit (' + d.mq2Raw + ' / ' + d.mq2Threshold + '). ' : '') +
     'Check the lab immediately.';
+}
+
+function showAlarm(d) {
+  $('alarmTitle').textContent = alarmTitle(d);
+  $('alarmText').textContent = alarmText(d);
+  $('alarmIcon').innerHTML = '<use href="#' + (d.flame ? 'i-fire' : 'i-alert') + '"/>';
   $('alarmTime').textContent = 'Detected at ' + new Date().toLocaleTimeString();
   $('alarmOverlay').classList.add('open');
   startSiren();
@@ -968,38 +1545,43 @@ $('alarmOk').addEventListener('click', () => {
 let state = null;
 let stateAt = 0;
 let deviceStatus = '';
+let live = false;
+let client = null;   // MQTT connection, set up below
 
 function render() {
   const d = state;
+  document.body.classList.remove('loading');
 
   // Temperature
   $('temp').textContent = d.temperature === null ? '--' : d.temperature.toFixed(1);
-  setRing('tempRing', d.temperature === null ? 0 : d.temperature / 50);
+  setArc('tempArc', d.temperature === null ? 0 : d.temperature / 50);
   $('tempSub').textContent = d.temperature === null ? 'Sensor error'
     : d.temperature < 18 ? 'Cool' : d.temperature <= 30 ? 'Normal' : d.temperature <= 38 ? 'Warm' : 'Hot';
 
   // Humidity
   $('hum').textContent = d.humidity === null ? '--' : d.humidity.toFixed(1);
-  setRing('humRing', d.humidity === null ? 0 : d.humidity / 100);
+  setArc('humArc', d.humidity === null ? 0 : d.humidity / 100);
   $('humSub').textContent = d.humidity === null ? 'Sensor error'
     : d.humidity < 30 ? 'Dry' : d.humidity <= 60 ? 'Comfortable' : 'Humid';
 
   // Gas
-  const max = d.mq2Threshold * 1.5;
+  const max = d.mq2Threshold * 1.6;
   $('mq2').textContent = d.mq2Raw;
   $('mq2Bar').style.width = Math.min(100, 100 * d.mq2Raw / max) + '%';
-  $('mq2Bar').style.background = d.gas ? 'var(--bad)' : d.mq2Raw > d.mq2Threshold * 0.8 ? 'var(--warn)' : 'var(--gas)';
+  $('mq2Bar').style.background = d.gas ? 'var(--bad)' : d.mq2Raw > d.mq2Threshold * 0.75 ? 'var(--warn)' : 'var(--gas)';
   $('mq2Mark').style.left = (100 * d.mq2Threshold / max) + '%';
-  $('gasSub').textContent = d.warmingUp ? 'Warming up...' : d.gas ? 'ABOVE LIMIT' : 'MQ-2 normal · limit ' + d.mq2Threshold;
-  $('gasSub').style.color = d.gas ? 'var(--bad)' : d.warmingUp ? 'var(--warn)' : '';
+  $('mq2Mark').dataset.label = 'limit ' + d.mq2Threshold;
+  $('gasTag').className = 'tag ' + (d.gas ? 'bad' : d.warmingUp ? 'warn' : 'ok');
+  $('gasTag').textContent = d.gas ? 'ALERT' : d.warmingUp ? 'WARMING UP' : 'NORMAL';
+  $('gasSub').textContent = d.gas ? 'Above the safe limit' : d.warmingUp ? 'Sensor heating up' : Math.round(100 * d.mq2Raw / d.mq2Threshold) + '% of limit';
   $('gasCard').classList.toggle('alert-on', d.gas);
 
   // Flame
-  $('flame').innerHTML = '';
-  $('flame').className = 'state' + (d.flame ? ' bad' : '');
-  $('flame').insertAdjacentHTML('beforeend',
-    '<svg width="16" height="16"><use href="#' + (d.flame ? 'i-alert' : 'i-check') + '"/></svg>');
-  $('flame').append(d.flame ? 'FLAME!' : 'No flame');
+  $('flame').textContent = d.flame ? 'FLAME DETECTED' : 'No flame';
+  $('flame').style.color = d.flame ? 'var(--bad)' : '';
+  $('flameSub').textContent = d.flame ? 'Check the lab now' : 'Infrared flame detector';
+  $('flameOrb').classList.toggle('on', d.flame);
+  $('flameOrb').innerHTML = '<svg width="30" height="30"><use href="#' + (d.flame ? 'i-fire' : 'i-check') + '"/></svg>';
   $('flameCard').classList.toggle('alert-on', d.flame);
 
   // People
@@ -1007,88 +1589,108 @@ function render() {
   $('entries').textContent = d.entries === undefined ? '--' : d.entries;
   $('exits').textContent = d.exits === undefined ? '--' : d.exits;
 
-  // Banner
-  const banner = $('banner');
-  banner.className = 'banner ' + (d.alarm ? 'bad' : d.warmingUp ? 'warn' : '');
-  $('bannerIcon').innerHTML = '<use href="#' + (d.alarm ? 'i-alert' : d.warmingUp ? 'i-clock' : 'i-check') + '"/>';
-  $('bannerTitle').textContent = d.alarm ? 'Emergency!' : d.warmingUp ? 'Starting up' : 'All Clear';
-  $('bannerText').textContent = d.alarm || d.warmingUp ? d.alert
-    : 'All sensors are normal · ' + d.people + (d.people === 1 ? ' person' : ' people') + ' inside';
-
-  // Wi-Fi
+  // Device
   const bars = signalBars(d.rssi);
-  wifiSvg($('wifiIconTop'), bars);
-  wifiSvg($('wifiIconCur'), bars);
-  $('wifiName').textContent = d.ssid || 'Wi-Fi';
-  $('curSsid').textContent = d.ssid || '--';
+  $$('.wifi-icon').forEach(el => wifiSvg(el, bars));
+  $$('.wifi-name').forEach(el => { el.textContent = d.ssid || 'Wi-Fi'; });
+  $('rssiText').textContent = ['', 'Weak', 'Fair', 'Good', 'Excellent'][bars] + ' · ' + d.rssi + ' dBm';
   $('curSignal').textContent = 'Connected · ' + ['', 'Weak', 'Fair', 'Good', 'Excellent'][bars] + ' signal (' + d.rssi + ' dBm)';
+  $('uptimeText').textContent = duration(d.uptime);
 
-  // Popup: new alarm, or a different alarm than the one dismissed
+  updateLive();
+
+  if (!live) return;   // cached reading: show it, but never raise alarms from it
+
+  // Popup + notification: new alarm, or a different alarm than the one dismissed
   if (d.alarm && (!lastAlarm || (d.alert !== dismissedAlert && !$('alarmOverlay').classList.contains('open')))) {
     showAlarm(d);
+    notify('🚨 ' + alarmTitle(d), alarmText(d), true);
   }
   if (!d.alarm && lastAlarm) {
     $('alarmOverlay').classList.remove('open');
     stopSiren();
     dismissedAlert = '';
     toast('Alarm cleared. Lab is safe.');
+    notify('✅ Alarm cleared', 'SMART LAB is back to normal.', false);
   }
   lastAlarm = d.alarm;
 
-  // Chart: one point every 10 s, keep 100
-  const now = Date.now();
-  if (chart && now - lastChartTime >= 10000 && d.temperature !== null && d.humidity !== null) {
-    lastChartTime = now;
-    hist.labels.push(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
-    hist.temp.push(d.temperature);
-    hist.hum.push(d.humidity);
-    if (hist.labels.length > 100) {
-      hist.labels.shift();
-      hist.temp.shift();
-      hist.hum.shift();
-    }
-    chart.update();
-  }
+  addHistoryPoint(d);
+}
 
-  updateLive();
+function setHero(cls, icon, title, text) {
+  $('hero').className = 'hero ' + cls;
+  $('heroIcon').innerHTML = '<use href="#' + icon + '"/>';
+  $('heroTitle').textContent = title;
+  $('heroText').textContent = text;
 }
 
 function updateLive() {
   const chip = $('liveChip');
-  const stale = Date.now() - stateAt > 10000;
+  const age = Date.now() - stateAt;
+  const stale = !live || age > 10000;
+  const d = state;
 
-  if (!client || !client.connected) {
-    chip.className = 'chip waiting';
-    $('liveText').textContent = 'Connecting';
-  } else if (deviceStatus === 'offline' || (state && stale)) {
-    chip.className = 'chip offline';
-    $('liveText').textContent = 'Device offline';
-    if (state) {
-      $('banner').className = 'banner idle';
-      $('bannerIcon').innerHTML = '<use href="#i-off"/>';
-      $('bannerTitle').textContent = 'Device offline';
-      $('bannerText').textContent = 'Showing the last readings received.';
-    }
-  } else if (!state) {
-    chip.className = 'chip waiting';
-    $('liveText').textContent = 'Waiting';
+  // Status chip
+  if (!navigator.onLine) {
+    chip.className = 'chip offline'; $('liveText').textContent = 'Offline';
+  } else if (!client || !client.connected) {
+    chip.className = 'chip waiting'; $('liveText').textContent = 'Connecting';
+  } else if (d && !stale && deviceStatus !== 'offline') {
+    chip.className = 'chip live'; $('liveText').textContent = 'Live';
+  } else if (d) {
+    chip.className = 'chip offline'; $('liveText').textContent = 'Device offline';
   } else {
-    chip.className = 'chip live';
-    $('liveText').textContent = 'Live';
+    chip.className = 'chip waiting'; $('liveText').textContent = 'Waiting';
+  }
+
+  // Timestamps
+  $('updatedPill').textContent = d ? 'Updated ' + ago(age) : 'No data yet';
+  $('updatedText').textContent = d ? ago(age) : '—';
+  $('uptimePill').hidden = !d || stale;
+  $('uptimePill').textContent = d ? 'Up ' + duration(d.uptime) : '';
+  $('deviceTag').className = 'tag ' + (d && !stale ? 'ok' : 'bad');
+  $('deviceTag').textContent = d && !stale ? 'ONLINE' : d ? 'OFFLINE' : '—';
+
+  // Hero
+  if (!d) {
+    setHero('', 'i-clock', 'Connecting…', 'Waiting for the first reading from the lab.');
+  } else if (stale) {
+    setHero('', 'i-off', 'Device offline', 'Last reading ' + ago(age) + '. Showing saved values.');
+  } else if (d.alarm) {
+    setHero('bad', 'i-alert', 'Emergency!', d.alert);
+  } else if (d.warmingUp) {
+    setHero('warn', 'i-clock', 'Starting up', d.alert);
+  } else {
+    setHero('ok', 'i-check', 'All Clear',
+      'All sensors normal · ' + d.people + (d.people === 1 ? ' person' : ' people') + ' in the lab');
   }
 }
 
 setInterval(updateLive, 1000);
 
+// Offline banner
+function updateOnline() {
+  $('offlineNotice').hidden = navigator.onLine;
+  updateLive();
+}
+window.addEventListener('online', updateOnline);
+window.addEventListener('offline', updateOnline);
+
+// Show the last saved reading instantly (also works offline).
+const cached = store(STATE_KEY);
+if (cached && cached.d) {
+  state = cached.d;
+  stateAt = cached.at;
+  render();
+}
+
 // =====================================================
 // MQTT
 // =====================================================
 
-let client = null;
-
 if (typeof mqtt === 'undefined') {
   $('liveText').textContent = 'No connection';
-  $('bannerText').textContent = 'Could not load the MQTT library. Check your internet.';
 } else {
   client = mqtt.connect(BROKER, {
     clientId: 'smartlab-web-' + Math.random().toString(16).slice(2, 10),
@@ -1113,8 +1715,10 @@ if (typeof mqtt === 'undefined') {
     if (topic === TOPIC + '/state') {
       state = data;
       stateAt = Date.now();
+      live = true;
       // Fresh data proves the device is online, even if an old "offline" is retained.
       deviceStatus = 'online';
+      store(STATE_KEY, { d: data, at: stateAt });
       render();
     } else if (topic === TOPIC + '/status') {
       deviceStatus = data;
@@ -1126,6 +1730,10 @@ if (typeof mqtt === 'undefined') {
     }
   });
 }
+
+updateOnline();
+updateAlertUi();
+applySeries();
 
 function send(cmd) {
   if (!client || !client.connected) {
@@ -1152,15 +1760,21 @@ function setMsg(text, cls) {
   m.append(text);
 }
 
-$('wifiOpen').addEventListener('click', () => {
+function openWifi() {
   $('wifiOverlay').classList.add('open');
   if (!joining) scan();
-});
+}
+
+['wifiTop', 'wifiTab', 'wifiCard'].forEach(id => $(id).addEventListener('click', openWifi));
 
 $('wifiClose').addEventListener('click', () => $('wifiOverlay').classList.remove('open'));
 
 $('wifiOverlay').addEventListener('click', e => {
   if (e.target === $('wifiOverlay')) $('wifiOverlay').classList.remove('open');
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') $('wifiOverlay').classList.remove('open');
 });
 
 $('scanBtn').addEventListener('click', scan);
@@ -1209,7 +1823,7 @@ function renderNetworks(data) {
 
     if (state && n.ssid === state.ssid) {
       const tag = document.createElement('span');
-      tag.className = 'tag';
+      tag.className = 'ntag';
       tag.textContent = 'Connected';
       b.append(tag);
     } else if (!n.open) {
@@ -1218,7 +1832,7 @@ function renderNetworks(data) {
 
     b.addEventListener('click', () => {
       selected = n;
-      document.querySelectorAll('.net').forEach(x => x.classList.toggle('sel', x === b));
+      $$('.net').forEach(x => x.classList.toggle('sel', x === b));
       $('passBox').hidden = false;
       $('pass').value = '';
       $('pass').hidden = n.open;
