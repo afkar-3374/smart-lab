@@ -24,7 +24,7 @@
 .diagram-scroll { overflow-x: auto; margin: 0 -4px; }
 .swipe-hint { display: none; text-align: center; font-size: 12px; color: var(--muted); margin-top: 8px; }
 @media (max-width: 760px) { .swipe-hint { display: block; } }
-.diagram { display: block; width: 100%; min-width: 760px; height: auto; }
+.diagram { display: block; width: 100%; min-width: 860px; height: auto; }
 
 .diagram text { font-family: Inter, system-ui, sans-serif; fill: var(--text); }
 .diagram .muted { fill: var(--muted); }
@@ -34,7 +34,9 @@
 .diagram .pinc.used { stroke-width: 0; }
 .diagram .box { fill: var(--card); stroke-width: 2; }
 .diagram .wire { fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
-.diagram .pwr { fill: none; stroke-width: 2.5; stroke-dasharray: 6 5; stroke-linecap: round; }
+.diagram { --gndc: #64748b; }
+.diagram .stub { fill: var(--card); stroke: var(--muted); stroke-width: 1.5; }
+@media (prefers-color-scheme: light) { .diagram { --gndc: #334155; } }
 </style>
 </head>
 <body>
@@ -59,105 +61,145 @@
   <!-- Diagram -->
   <div class="card">
     <h2>Wiring diagram</h2>
-    <p>ESP32 DevKit (30-pin) seen from above: antenna at the top, USB at the bottom. Solid lines are signals, dashed lines are power.</p>
+    <p>ESP32 DevKit (30-pin) seen from above: antenna at the top, USB at the bottom. Every sensor's VCC, GND and signal wire is shown.</p>
 
     <div class="diagram-scroll">
-      <svg class="diagram" viewBox="0 0 900 520" role="img" aria-label="Wiring diagram: MQ-2 to G34 and VIN, buzzer to G25, IR B to G19, IR A to G18, DHT22 to G4, flame sensor to G15, all sensors share GND">
+      <svg class="diagram" viewBox="0 0 1060 560" role="img" aria-label="Wiring diagram. Right side: IR B OUT to G19, IR A OUT to G18, DHT22 DATA to G4, flame D0 to G15, each with VCC to 3V3 and GND to GND. Left side: MQ-2 AO through a 10k and 20k divider to G34, VCC to VIN, GND to GND; buzzer plus to G25 and minus to GND.">
 
         <!-- Board -->
-        <rect class="board" x="340" y="40" width="220" height="460" rx="14"/>
-        <rect class="chip" x="395" y="48" width="110" height="30" rx="4"/>
-        <text x="450" y="68" text-anchor="middle" font-size="12" class="muted">antenna</text>
-        <text x="450" y="250" text-anchor="middle" font-size="22" font-weight="800">ESP32</text>
-        <text x="450" y="272" text-anchor="middle" font-size="12" class="muted">DevKit V1</text>
-        <rect class="chip" x="420" y="478" width="60" height="22" rx="4"/>
-        <text x="450" y="494" text-anchor="middle" font-size="11" class="muted">USB</text>
+        <rect class="board" x="420" y="40" width="220" height="460" rx="14"/>
+        <rect class="chip" x="475" y="48" width="110" height="30" rx="4"/>
+        <text x="530" y="68" text-anchor="middle" font-size="12" class="muted">antenna</text>
+        <text x="530" y="250" text-anchor="middle" font-size="22" font-weight="800">ESP32</text>
+        <text x="530" y="272" text-anchor="middle" font-size="12" class="muted">DevKit V1</text>
+        <rect class="chip" x="500" y="478" width="60" height="22" rx="4"/>
+        <text x="530" y="494" text-anchor="middle" font-size="11" class="muted">USB</text>
 
-        <!-- Left pins: EN VP VN G34 G35 G32 G33 G25 G26 G27 G14 G12 G13 GND VIN -->
         <g font-size="12" font-weight="600">
-          <circle class="pinc" cx="355" cy="92" r="5"/><text x="368" y="96" class="muted">EN</text>
-          <circle class="pinc" cx="355" cy="118" r="5"/><text x="368" y="122" class="muted">VP</text>
-          <circle class="pinc" cx="355" cy="144" r="5"/><text x="368" y="148" class="muted">VN</text>
-          <circle class="pinc used" cx="355" cy="170" r="6" fill="var(--gas)"/><text x="368" y="174">G34</text>
-          <circle class="pinc" cx="355" cy="196" r="5"/><text x="368" y="200" class="muted">G35</text>
-          <circle class="pinc" cx="355" cy="222" r="5"/><text x="368" y="226" class="muted">G32</text>
-          <circle class="pinc" cx="355" cy="248" r="5"/><text x="368" y="252" class="muted">G33</text>
-          <circle class="pinc used" cx="355" cy="274" r="6" fill="var(--warn)"/><text x="368" y="278">G25</text>
-          <circle class="pinc" cx="355" cy="300" r="5"/><text x="368" y="304" class="muted">G26</text>
-          <circle class="pinc" cx="355" cy="326" r="5"/><text x="368" y="330" class="muted">G27</text>
-          <circle class="pinc" cx="355" cy="352" r="5"/><text x="368" y="356" class="muted">G14</text>
-          <circle class="pinc" cx="355" cy="378" r="5"/><text x="368" y="382" class="muted">G12</text>
-          <circle class="pinc" cx="355" cy="404" r="5"/><text x="368" y="408" class="muted">G13</text>
-          <circle class="pinc used" cx="355" cy="430" r="6" fill="var(--muted)"/><text x="368" y="434">GND</text>
-          <circle class="pinc used" cx="355" cy="456" r="6" fill="var(--bad)"/><text x="368" y="460">VIN</text>
+          <circle class="pinc" cx="435" cy="92" r="5"/><text x="448" y="96" text-anchor="start" class="muted">EN</text>
+          <circle class="pinc" cx="435" cy="118" r="5"/><text x="448" y="122" text-anchor="start" class="muted">VP</text>
+          <circle class="pinc" cx="435" cy="144" r="5"/><text x="448" y="148" text-anchor="start" class="muted">VN</text>
+          <circle class="pinc used" cx="435" cy="170" r="6" fill="var(--gas)"/><text x="448" y="174" text-anchor="start">G34</text>
+          <circle class="pinc" cx="435" cy="196" r="5"/><text x="448" y="200" text-anchor="start" class="muted">G35</text>
+          <circle class="pinc" cx="435" cy="222" r="5"/><text x="448" y="226" text-anchor="start" class="muted">G32</text>
+          <circle class="pinc" cx="435" cy="248" r="5"/><text x="448" y="252" text-anchor="start" class="muted">G33</text>
+          <circle class="pinc used" cx="435" cy="274" r="6" fill="var(--warn)"/><text x="448" y="278" text-anchor="start">G25</text>
+          <circle class="pinc" cx="435" cy="300" r="5"/><text x="448" y="304" text-anchor="start" class="muted">G26</text>
+          <circle class="pinc" cx="435" cy="326" r="5"/><text x="448" y="330" text-anchor="start" class="muted">G27</text>
+          <circle class="pinc" cx="435" cy="352" r="5"/><text x="448" y="356" text-anchor="start" class="muted">G14</text>
+          <circle class="pinc" cx="435" cy="378" r="5"/><text x="448" y="382" text-anchor="start" class="muted">G12</text>
+          <circle class="pinc" cx="435" cy="404" r="5"/><text x="448" y="408" text-anchor="start" class="muted">G13</text>
+          <circle class="pinc used" cx="435" cy="430" r="6" fill="var(--muted)"/><text x="448" y="434" text-anchor="start">GND</text>
+          <circle class="pinc used" cx="435" cy="456" r="6" fill="var(--bad)"/><text x="448" y="460" text-anchor="start">VIN</text>
+          <circle class="pinc" cx="625" cy="92" r="5"/><text x="612" y="96" text-anchor="end" class="muted">G23</text>
+          <circle class="pinc" cx="625" cy="118" r="5"/><text x="612" y="122" text-anchor="end" class="muted">G22</text>
+          <circle class="pinc" cx="625" cy="144" r="5"/><text x="612" y="148" text-anchor="end" class="muted">TX</text>
+          <circle class="pinc" cx="625" cy="170" r="5"/><text x="612" y="174" text-anchor="end" class="muted">RX</text>
+          <circle class="pinc" cx="625" cy="196" r="5"/><text x="612" y="200" text-anchor="end" class="muted">G21</text>
+          <circle class="pinc used" cx="625" cy="222" r="6" fill="#14b8a6"/><text x="612" y="226" text-anchor="end">G19</text>
+          <circle class="pinc used" cx="625" cy="248" r="6" fill="var(--people)"/><text x="612" y="252" text-anchor="end">G18</text>
+          <circle class="pinc" cx="625" cy="274" r="5"/><text x="612" y="278" text-anchor="end" class="muted">G5</text>
+          <circle class="pinc" cx="625" cy="300" r="5"/><text x="612" y="304" text-anchor="end" class="muted">TX2</text>
+          <circle class="pinc" cx="625" cy="326" r="5"/><text x="612" y="330" text-anchor="end" class="muted">RX2</text>
+          <circle class="pinc used" cx="625" cy="352" r="6" fill="var(--temp)"/><text x="612" y="356" text-anchor="end">G4</text>
+          <circle class="pinc" cx="625" cy="378" r="5"/><text x="612" y="382" text-anchor="end" class="muted">G2</text>
+          <circle class="pinc used" cx="625" cy="404" r="6" fill="#d946ef"/><text x="612" y="408" text-anchor="end">G15</text>
+          <circle class="pinc used" cx="625" cy="430" r="6" fill="var(--muted)"/><text x="612" y="434" text-anchor="end">GND</text>
+          <circle class="pinc used" cx="625" cy="456" r="6" fill="var(--bad)"/><text x="612" y="460" text-anchor="end">3V3</text>
         </g>
 
-        <!-- Right pins: G23 G22 TX RX G21 G19 G18 G5 TX2 RX2 G4 G2 G15 GND 3V3 -->
-        <g font-size="12" font-weight="600" text-anchor="end">
-          <circle class="pinc" cx="545" cy="92" r="5"/><text x="532" y="96" class="muted">G23</text>
-          <circle class="pinc" cx="545" cy="118" r="5"/><text x="532" y="122" class="muted">G22</text>
-          <circle class="pinc" cx="545" cy="144" r="5"/><text x="532" y="148" class="muted">TX</text>
-          <circle class="pinc" cx="545" cy="170" r="5"/><text x="532" y="174" class="muted">RX</text>
-          <circle class="pinc" cx="545" cy="196" r="5"/><text x="532" y="200" class="muted">G21</text>
-          <circle class="pinc used" cx="545" cy="222" r="6" fill="#14b8a6"/><text x="532" y="226">G19</text>
-          <circle class="pinc used" cx="545" cy="248" r="6" fill="var(--people)"/><text x="532" y="252">G18</text>
-          <circle class="pinc" cx="545" cy="274" r="5"/><text x="532" y="278" class="muted">G5</text>
-          <circle class="pinc" cx="545" cy="300" r="5"/><text x="532" y="304" class="muted">TX2</text>
-          <circle class="pinc" cx="545" cy="326" r="5"/><text x="532" y="330" class="muted">RX2</text>
-          <circle class="pinc used" cx="545" cy="352" r="6" fill="var(--temp)"/><text x="532" y="356">G4</text>
-          <circle class="pinc" cx="545" cy="378" r="5"/><text x="532" y="382" class="muted">G2</text>
-          <circle class="pinc used" cx="545" cy="404" r="6" fill="var(--bad)"/><text x="532" y="408">G15</text>
-          <circle class="pinc used" cx="545" cy="430" r="6" fill="var(--muted)"/><text x="532" y="434">GND</text>
-          <circle class="pinc used" cx="545" cy="456" r="6" fill="var(--hum)"/><text x="532" y="460">3V3</text>
+        <!-- ========== Right side: 3V3 sensors ========== -->
+
+        <!-- 3V3 rail -->
+        <path class="wire" stroke="var(--bad)" d="M631 456 H790 V86 H840"/>
+        <path class="wire" stroke="var(--bad)" d="M790 176 H840 M790 266 H840 M790 356 H840"/>
+        <circle cx="790" cy="176" r="4.5" fill="var(--bad)"/><circle cx="790" cy="266" r="4.5" fill="var(--bad)"/><circle cx="790" cy="356" r="4.5" fill="var(--bad)"/>
+        <text x="782" y="474" text-anchor="end" font-size="11" font-weight="700" fill="var(--bad)">3V3 rail</text>
+
+        <!-- GND rail -->
+        <path class="wire" stroke="var(--gndc)" d="M631 430 H810 V120 H840"/>
+        <path class="wire" stroke="var(--gndc)" d="M810 210 H840 M810 300 H840 M810 390 H840"/>
+        <circle cx="810" cy="210" r="4.5" fill="var(--gndc)"/><circle cx="810" cy="300" r="4.5" fill="var(--gndc)"/><circle cx="810" cy="390" r="4.5" fill="var(--gndc)"/>
+        <text x="818" y="446" font-size="11" font-weight="700" class="muted">GND rail</text>
+
+        <!-- Signals -->
+        <path class="wire" stroke="#14b8a6" d="M631 222 H700 V103 H840"/>
+        <path class="wire" stroke="var(--people)" d="M631 248 H715 V193 H840"/>
+        <path class="wire" stroke="var(--temp)" d="M631 352 H715 V283 H840"/>
+        <path class="wire" stroke="#d946ef" d="M631 404 H700 V373 H840"/>
+
+        <!-- Sensors -->
+        <rect class="box" x="840" y="70" width="200" height="66" rx="12" stroke="#14b8a6"/>
+        <text x="932" y="99" font-size="15" font-weight="800">IR B</text>
+        <text x="932" y="118" font-size="11" class="muted">inside the door</text>
+        <circle cx="840" cy="86" r="3.5" class="stub"/><text x="850" y="90" font-size="10.5" font-weight="700" class="muted">VCC</text>
+        <circle cx="840" cy="103" r="3.5" class="stub"/><text x="850" y="107" font-size="10.5" font-weight="700" class="muted">OUT</text>
+        <circle cx="840" cy="120" r="3.5" class="stub"/><text x="850" y="124" font-size="10.5" font-weight="700" class="muted">GND</text>
+        <rect class="box" x="840" y="160" width="200" height="66" rx="12" stroke="var(--people)"/>
+        <text x="932" y="189" font-size="15" font-weight="800">IR A</text>
+        <text x="932" y="208" font-size="11" class="muted">outside the door</text>
+        <circle cx="840" cy="176" r="3.5" class="stub"/><text x="850" y="180" font-size="10.5" font-weight="700" class="muted">VCC</text>
+        <circle cx="840" cy="193" r="3.5" class="stub"/><text x="850" y="197" font-size="10.5" font-weight="700" class="muted">OUT</text>
+        <circle cx="840" cy="210" r="3.5" class="stub"/><text x="850" y="214" font-size="10.5" font-weight="700" class="muted">GND</text>
+        <rect class="box" x="840" y="250" width="200" height="66" rx="12" stroke="var(--temp)"/>
+        <text x="932" y="279" font-size="15" font-weight="800">DHT22</text>
+        <text x="932" y="298" font-size="11" class="muted">temp &amp; humidity</text>
+        <circle cx="840" cy="266" r="3.5" class="stub"/><text x="850" y="270" font-size="10.5" font-weight="700" class="muted">VCC</text>
+        <circle cx="840" cy="283" r="3.5" class="stub"/><text x="850" y="287" font-size="10.5" font-weight="700" class="muted">DATA</text>
+        <circle cx="840" cy="300" r="3.5" class="stub"/><text x="850" y="304" font-size="10.5" font-weight="700" class="muted">GND</text>
+        <rect class="box" x="840" y="340" width="200" height="66" rx="12" stroke="#d946ef"/>
+        <text x="932" y="369" font-size="15" font-weight="800">Flame</text>
+        <text x="932" y="388" font-size="11" class="muted">flame sensor</text>
+        <circle cx="840" cy="356" r="3.5" class="stub"/><text x="850" y="360" font-size="10.5" font-weight="700" class="muted">VCC</text>
+        <circle cx="840" cy="373" r="3.5" class="stub"/><text x="850" y="377" font-size="10.5" font-weight="700" class="muted">D0</text>
+        <circle cx="840" cy="390" r="3.5" class="stub"/><text x="850" y="394" font-size="10.5" font-weight="700" class="muted">GND</text>
+
+        <!-- ========== Left side: 5 V gas sensor + buzzer ========== -->
+
+        <!-- MQ-2 -->
+        <rect class="box" x="20" y="112" width="200" height="66" rx="12" stroke="var(--gas)"/>
+        <text x="34" y="140" font-size="15" font-weight="800">MQ-2</text>
+        <text x="34" y="159" font-size="11" class="muted">gas / smoke</text>
+        <circle cx="220" cy="128" r="3.5" class="stub"/><text x="210" y="132" text-anchor="end" font-size="10.5" font-weight="700" class="muted">VCC</text>
+        <circle cx="220" cy="145" r="3.5" class="stub"/><text x="210" y="149" text-anchor="end" font-size="10.5" font-weight="700" class="muted">AO</text>
+        <circle cx="220" cy="162" r="3.5" class="stub"/><text x="210" y="166" text-anchor="end" font-size="10.5" font-weight="700" class="muted">GND</text>
+
+        <!-- Buzzer -->
+        <rect class="box" x="20" y="258" width="200" height="50" rx="12" stroke="var(--warn)"/>
+        <text x="34" y="288" font-size="15" font-weight="800">Buzzer</text>
+        <circle cx="220" cy="274" r="3.5" class="stub"/><text x="210" y="278" text-anchor="end" font-size="10.5" font-weight="700" class="muted">+</text>
+        <circle cx="220" cy="292" r="3.5" class="stub"/><text x="210" y="296" text-anchor="end" font-size="10.5" font-weight="700" class="muted">−</text>
+
+        <!-- VIN (5 V) to MQ-2 VCC -->
+        <path class="wire" stroke="var(--bad)" d="M429 456 H370 V128 H220"/>
+        <text x="362" y="474" text-anchor="end" font-size="11" font-weight="700" fill="var(--bad)">VIN 5 V</text>
+
+        <!-- GND rail: MQ-2 GND, buzzer −, divider -->
+        <path class="wire" stroke="var(--gndc)" d="M429 430 H390 V162 H220"/>
+        <path class="wire" stroke="var(--gndc)" d="M390 292 H220 M390 245 H320"/>
+        <circle cx="390" cy="292" r="4.5" fill="var(--gndc)"/><circle cx="390" cy="245" r="4.5" fill="var(--gndc)"/>
+        <text x="398" y="446" font-size="11" font-weight="700" class="muted">GND</text>
+
+        <!-- AO → 10k → node → G34, node → 20k → GND -->
+        <path class="wire" stroke="var(--gas)" d="M220 145 H245 M295 145 H320 V170 H429"/>
+        <rect x="245" y="137" width="50" height="16" rx="4" fill="var(--card)" stroke="var(--gas)" stroke-width="2"/>
+        <text x="270" y="149" text-anchor="middle" font-size="10" font-weight="800">10k</text>
+        <path class="wire" stroke="var(--gas)" d="M320 170 V192 M320 228 V245"/>
+        <rect x="312" y="192" width="16" height="36" rx="4" fill="var(--card)" stroke="var(--gas)" stroke-width="2"/>
+        <text x="336" y="214" font-size="10" font-weight="800">20k</text>
+        <circle cx="320" cy="170" r="4.5" fill="var(--gas)"/>
+
+        <!-- Buzzer + → G25 -->
+        <path class="wire" stroke="var(--warn)" d="M220 274 H429"/>
+
+        <!-- Legend -->
+        <g font-size="12" font-weight="600" transform="translate(20 528)">
+          <line x1="0" y1="0" x2="26" y2="0" stroke="var(--bad)" stroke-width="3"/><text x="34" y="4">Power (+)</text>
+          <line x1="130" y1="0" x2="156" y2="0" stroke="var(--gndc)" stroke-width="3"/><text x="164" y="4">Ground</text>
+          <line x1="250" y1="0" x2="276" y2="0" stroke="var(--accent)" stroke-width="3"/><text x="284" y="4">Signal (colour per sensor)</text>
+          <circle cx="490" cy="0" r="4.5" fill="var(--muted)"/><text x="502" y="4">Joined wires</text>
+          <text x="620" y="4" class="muted">Wires that cross without a dot are not connected.</text>
         </g>
-
-        <!-- Left sensors -->
-        <rect class="box" x="30" y="115" width="210" height="90" rx="12" stroke="var(--gas)"/>
-        <text x="46" y="140" font-size="15" font-weight="800">MQ-2 gas</text>
-        <text x="46" y="160" font-size="12" class="muted">AO → divider → G34</text>
-        <text x="46" y="177" font-size="12" class="muted">VCC → VIN (5 V)</text>
-        <text x="46" y="194" font-size="12" class="muted">GND → GND</text>
-
-        <rect class="box" x="30" y="248" width="210" height="56" rx="12" stroke="var(--warn)"/>
-        <text x="46" y="272" font-size="15" font-weight="800">Buzzer</text>
-        <text x="46" y="292" font-size="12" class="muted">+ → G25 · − → GND</text>
-
-        <!-- Left wires -->
-        <path class="wire" stroke="var(--gas)" d="M349 170 H285 V150 H240"/>
-        <rect x="262" y="138" width="46" height="18" rx="4" fill="var(--card)" stroke="var(--gas)"/>
-        <text x="285" y="151" text-anchor="middle" font-size="10" font-weight="700">10k/20k</text>
-        <path class="wire" stroke="var(--warn)" d="M349 274 H240"/>
-        <path class="pwr" stroke="var(--bad)" d="M349 456 H310 V190 H240"/>
-        <text x="300" y="476" text-anchor="end" font-size="11" class="muted">5 V to MQ-2</text>
-        <path class="pwr" stroke="var(--muted)" d="M349 430 H250"/>
-        <text x="245" y="434" text-anchor="end" font-size="11" class="muted">GND → MQ-2, buzzer</text>
-
-        <!-- Right sensors -->
-        <rect class="box" x="660" y="120" width="210" height="54" rx="12" stroke="#14b8a6"/>
-        <text x="676" y="143" font-size="15" font-weight="800">IR B</text>
-        <text x="676" y="162" font-size="12" class="muted">OUT → G19 · inside</text>
-
-        <rect class="box" x="660" y="195" width="210" height="54" rx="12" stroke="var(--people)"/>
-        <text x="676" y="218" font-size="15" font-weight="800">IR A</text>
-        <text x="676" y="237" font-size="12" class="muted">OUT → G18 · outside</text>
-
-        <rect class="box" x="660" y="268" width="210" height="54" rx="12" stroke="var(--temp)"/>
-        <text x="676" y="291" font-size="15" font-weight="800">DHT22</text>
-        <text x="676" y="310" font-size="12" class="muted">DATA → G4</text>
-
-        <rect class="box" x="660" y="358" width="210" height="54" rx="12" stroke="var(--bad)"/>
-        <text x="676" y="381" font-size="15" font-weight="800">Flame sensor</text>
-        <text x="676" y="400" font-size="12" class="muted">D0 → G15</text>
-
-        <!-- Right wires -->
-        <path class="wire" stroke="#14b8a6" d="M551 222 H605 V147 H660"/>
-        <path class="wire" stroke="var(--people)" d="M551 248 H625 V222 H660"/>
-        <path class="wire" stroke="var(--temp)" d="M551 352 H625 V295 H660"/>
-        <path class="wire" stroke="var(--bad)" d="M551 404 H605 V385 H660"/>
-        <path class="pwr" stroke="var(--muted)" d="M551 430 H640"/>
-        <text x="648" y="434" font-size="11" class="muted">GND → DHT22, flame, IR A, IR B</text>
-        <path class="pwr" stroke="var(--hum)" d="M551 456 H640"/>
-        <text x="648" y="460" font-size="11" class="muted">3V3 → DHT22, flame, IR A, IR B</text>
       </svg>
     </div>
     <div class="swipe-hint">← Swipe to see the whole diagram →</div>
@@ -167,7 +209,7 @@
   <div class="grid">
 
     <div class="card">
-      <div class="card-head"><span class="dot" style="background:var(--bad)"></span><h2>Flame sensor</h2></div>
+      <div class="card-head"><span class="dot" style="background:#d946ef"></span><h2>Flame sensor</h2></div>
       <table>
         <tr><th>Sensor pin</th><th>ESP32</th></tr>
         <tr><td>VCC</td><td><span class="pin">3V3</span></td></tr>
