@@ -4,72 +4,123 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>DDLC OS Tracker</title>
-<meta name="description" content="Live progress of a DDLC OS SD card flash. Enter the 3-digit tracking ID from ddlc-flash.">
+<meta name="description" content="Live, detailed progress of a DDLC OS build or SD card flash. Enter the 3-digit tracking ID.">
 <meta name="theme-color" content="#002d07">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23008100'/%3E%3Cpath d='M18 33l9 9 19-20' stroke='white' stroke-width='7' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <style>
   :root {
-    --bg: #f4f7f4; --card: #ffffff; --text: #0f1a12; --dim: #5d6b61; --line: #e1e8e2;
-    --track: #e6ece7; --run: #008100; --done: #15803d; --fail: #dc2626; --warn: #d97706; --wait: #94a3b8;
-    --brand: #002d07;
+    --bg: #f3f6f3; --card: #ffffff; --text: #0f1a12; --dim: #5b6a60; --faint: #8a988f; --line: #e0e7e1;
+    --track: #e7ede8; --run: #008100; --done: #15803d; --fail: #dc2626; --warn: #d97706; --wait: #a3b0a7;
+    --brand: #002d07; --chip: #eef3ef; --accent2: #2563eb;
   }
   @media (prefers-color-scheme: dark) {
-    :root { --bg: #0b120d; --card: #131c16; --text: #e7efe9; --dim: #8fa096; --line: #233027;
-            --track: #1f2a22; --run: #3fb950; --done: #3fb950; --fail: #f85149; --warn: #e3a008; --wait: #6e7681;
-            --brand: #3fb950; }
+    :root { --bg: #0a110c; --card: #121b15; --text: #e7efe9; --dim: #94a59a; --faint: #6b7b70; --line: #223027;
+            --track: #1d2820; --run: #3fb950; --done: #3fb950; --fail: #f85149; --warn: #e3a008; --wait: #4b5a50;
+            --brand: #3fb950; --chip: #18231b; --accent2: #58a6ff; }
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text);
-         font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-  main { max-width: 560px; margin: 0 auto; padding: 20px 16px 40px; }
-  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
-  h1 { font-size: 20px; margin: 0; letter-spacing: -0.01em; }
-  h1 b { color: var(--brand); }
+         font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+  main { max-width: 640px; margin: 0 auto; padding: 18px 16px 44px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+  h1 { font-size: 19px; margin: 0; letter-spacing: -0.01em; } h1 b { color: var(--brand); }
   .conn { font-size: 12px; color: var(--dim); display: flex; align-items: center; gap: 6px; white-space: nowrap; }
   .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--wait); }
-  .dot.on { background: var(--done); } .dot.off { background: var(--fail); }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-bottom: 12px; }
+  .dot.on { background: var(--done); box-shadow: 0 0 0 3px color-mix(in srgb, var(--done) 25%, transparent); }
+  .dot.off { background: var(--fail); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; margin-bottom: 12px; }
+  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .07em; color: var(--dim); margin: 0 0 10px; font-weight: 650; }
+  .num { font-variant-numeric: tabular-nums; }
+
+  /* hero */
   .hero { display: flex; align-items: center; gap: 16px; }
-  .ring { position: relative; width: 92px; height: 92px; flex: none; }
-  .ring svg { transform: rotate(-90deg); }
-  .ring .pct { position: absolute; inset: 0; display: grid; place-items: center; font-size: 22px; font-weight: 700;
-               font-variant-numeric: tabular-nums; }
-  .state { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--run); }
-  .state.done { color: var(--done); } .state.failed { color: var(--fail); } .state.idle { color: var(--wait); }
-  .headline { font-size: 16px; font-weight: 600; margin: 2px 0 4px; overflow-wrap: anywhere; }
-  .age, .meta { font-size: 12px; color: var(--dim); overflow-wrap: anywhere; }
-  .step { padding: 12px 0; border-top: 1px solid var(--line); }
-  .step:first-child { border-top: 0; padding-top: 0; } .step:last-child { padding-bottom: 0; }
+  .ring { position: relative; width: 104px; height: 104px; flex: none; }
+  .ring svg { transform: rotate(-90deg); display: block; }
+  .ring .pct { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; }
+  .ring .pct b { font-size: 26px; line-height: 1; } .ring .pct small { display: block; font-size: 11px; color: var(--dim); margin-top: 2px; }
+  .state { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase;
+           letter-spacing: .07em; color: var(--run); background: var(--chip); padding: 3px 8px; border-radius: 99px; }
+  .state.done { color: var(--done); } .state.failed { color: var(--fail); } .state.idle { color: var(--dim); }
+  .headline { font-size: 16px; font-weight: 650; margin: 6px 0 4px; overflow-wrap: anywhere; }
+  .sub { font-size: 12.5px; color: var(--dim); overflow-wrap: anywhere; }
+  .times { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; }
+  .times div { background: var(--chip); border-radius: 12px; padding: 9px 10px; }
+  .times span { display: block; font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: .05em; }
+  .times b { font-size: 17px; }
+
+  /* stats */
+  .stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--line);
+           border-radius: 12px; overflow: hidden; border: 1px solid var(--line); }
+  .stats div { background: var(--card); padding: 9px 11px; min-width: 0; }
+  .stats span { display: block; font-size: 11px; color: var(--dim); }
+  .stats b { display: block; font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* charts */
+  .charts { display: grid; grid-template-columns: 1fr; gap: 14px; }
+  .chart { position: relative; }
+  .chart .lbl { display: flex; justify-content: space-between; font-size: 12px; color: var(--dim); margin-bottom: 4px; }
+  .chart .lbl b { color: var(--text); font-weight: 600; }
+  .chart svg { display: block; width: 100%; height: 84px; }
+  .nochart { color: var(--faint); font-size: 13px; text-align: center; padding: 14px 0; }
+
+  /* steps */
+  .step { padding: 13px 0; border-top: 1px solid var(--line); }
+  .step:first-of-type { border-top: 0; padding-top: 2px; } .step:last-child { padding-bottom: 0; }
   .row { display: flex; align-items: center; gap: 10px; }
-  .icon { width: 22px; height: 22px; border-radius: 50%; flex: none; display: grid; place-items: center;
-          font-size: 12px; font-weight: 700; color: #fff; background: var(--wait); }
+  .icon { width: 24px; height: 24px; border-radius: 50%; flex: none; display: grid; place-items: center;
+          font-size: 12px; font-weight: 800; color: #fff; background: var(--wait); }
   .icon.run { background: var(--run); } .icon.done { background: var(--done); } .icon.fail { background: var(--fail); }
   .icon.warn { background: var(--warn); }
   .icon.run::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #fff; animation: pulse 1.2s infinite; }
   @keyframes pulse { 50% { opacity: .25; } }
-  .name { font-weight: 600; flex: 1; }
-  .num { font-variant-numeric: tabular-nums; color: var(--dim); font-size: 13px; }
-  .detail { color: var(--dim); font-size: 13px; margin: 4px 0 8px 32px; overflow-wrap: anywhere; }
-  .bar { height: 6px; background: var(--track); border-radius: 3px; overflow: hidden; margin-left: 32px; }
-  .bar i { display: block; height: 100%; width: 0; background: var(--run); border-radius: 3px; transition: width .6s; }
+  .name { font-weight: 650; flex: 1; min-width: 0; }
+  .right { text-align: right; font-size: 12.5px; color: var(--dim); white-space: nowrap; }
+  .right b { color: var(--text); font-size: 14px; }
+  .detail { color: var(--dim); font-size: 13px; margin: 4px 0 8px 34px; overflow-wrap: anywhere; }
+  .bar { height: 7px; background: var(--track); border-radius: 4px; overflow: hidden; margin-left: 34px; }
+  .bar i { display: block; height: 100%; width: 0; background: var(--run); border-radius: 4px; transition: width .6s; }
   .bar i.done { background: var(--done); } .bar i.fail { background: var(--fail); } .bar i.warn { background: var(--warn); }
   .bar i.wait, .bar i.skip { background: var(--wait); }
-  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--dim); margin: 0 0 8px; }
-  pre { margin: 0; font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap;
-        overflow-wrap: anywhere; color: var(--dim); }
-  .empty { color: var(--dim); text-align: center; padding: 20px 0; }
+  .bar i.run { background-image: linear-gradient(90deg, transparent 0 40%, rgba(255,255,255,.35) 50%, transparent 60% 100%);
+               background-size: 200% 100%; animation: shine 1.6s linear infinite; }
+  @keyframes shine { from { background-position: 150% 0; } to { background-position: -50% 0; } }
+  details { margin: 10px 0 0 34px; }
+  summary { cursor: pointer; font-size: 12.5px; color: var(--run); font-weight: 600; list-style: none; }
+  summary::-webkit-details-marker { display: none; }
+  summary::before { content: "▸ "; } details[open] summary::before { content: "▾ "; }
+  .subs { list-style: none; margin: 8px 0 0; padding: 0; }
+  .subs li { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 4px 0; }
+  .subs li .s { width: 14px; height: 14px; border-radius: 50%; flex: none; background: var(--wait); }
+  .subs li.done .s { background: var(--done); } .subs li.run .s { background: var(--run); animation: pulse 1.2s infinite; }
+  .subs li.fail .s { background: var(--fail); } .subs li.warn .s { background: var(--warn); }
+  .subs li .n { flex: 1; min-width: 0; overflow-wrap: anywhere; } .subs li.wait .n { color: var(--faint); }
+  .subs li .d { color: var(--dim); font-variant-numeric: tabular-nums; font-size: 12px; }
+
+  /* piece map */
+  .map { margin: 10px 0 0 34px; }
+  .map .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(13px, 1fr)); gap: 3px; }
+  .map .grid i { aspect-ratio: 1; border-radius: 3px; background: var(--track); }
+  .map .grid i.o { background: var(--done); } .map .grid i.x { background: var(--fail); } .map .grid i.r { background: var(--run); animation: pulse 1s infinite; }
+  .map .legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 11.5px; color: var(--dim); margin-top: 6px; }
+  .map .legend em { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 4px; font-style: normal; vertical-align: -1px; }
+
+  pre { margin: 0; font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap;
+        overflow-wrap: anywhere; color: var(--dim); max-height: 260px; overflow: auto; }
+  .empty { color: var(--dim); text-align: center; padding: 18px 0; }
   form { display: flex; gap: 10px; margin-top: 12px; }
-  input { flex: 1; min-width: 0; font: 600 28px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .4em;
-          text-align: center; padding: 12px; border: 1px solid var(--line); border-radius: 10px;
-          background: var(--bg); color: var(--text); }
+  input { flex: 1; min-width: 0; font: 650 30px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .4em;
+          text-align: center; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); color: var(--text); }
   input:focus { outline: 2px solid var(--run); outline-offset: 1px; }
-  button { font: 600 15px system-ui, sans-serif; padding: 0 18px; border: 0; border-radius: 10px;
-           background: var(--run); color: #fff; cursor: pointer; }
-  button.link { background: none; color: var(--run); padding: 0; font-weight: 600; }
+  button { font: 650 15px system-ui, sans-serif; padding: 0 20px; border: 0; border-radius: 12px; background: var(--run); color: #fff; cursor: pointer; }
+  button.link { background: none; color: var(--run); padding: 6px; }
   .hint { color: var(--dim); font-size: 13px; margin: 8px 0 0; }
-  code { font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--track); padding: 1px 5px; border-radius: 5px; }
-  footer { color: var(--dim); font-size: 12px; text-align: center; margin-top: 18px; }
+  code { font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--chip); padding: 1px 5px; border-radius: 5px; }
+  .banner { border-radius: 12px; padding: 11px 13px; font-size: 14px; font-weight: 600; margin-top: 12px; }
+  .banner.done { background: color-mix(in srgb, var(--done) 14%, transparent); color: var(--done); }
+  .banner.failed { background: color-mix(in srgb, var(--fail) 14%, transparent); color: var(--fail); }
+  footer { color: var(--faint); font-size: 12px; text-align: center; margin-top: 18px; }
   [hidden] { display: none !important; }
+  @media (min-width: 560px) { .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); } .charts { grid-template-columns: 1fr 1fr; } }
 </style>
 </head>
 <body>
@@ -79,9 +130,8 @@
     <div class="conn"><span class="dot" id="dot"></span><span id="conn">offline</span></div>
   </header>
 
-  <!-- ID entry -->
   <section class="card" id="ask">
-    <h2>Track an SD card flash</h2>
+    <h2>Track a build or SD card flash</h2>
     <div>Enter the 3-digit tracking ID that Claude Code (or <code>ddlc-flash</code>) gave you.</div>
     <form id="form" autocomplete="off">
       <input id="idbox" inputmode="numeric" pattern="[0-9]{3}" maxlength="3" placeholder="123" aria-label="3-digit tracking ID" required>
@@ -90,81 +140,169 @@
     <p class="hint" id="askerr" hidden></p>
   </section>
 
-  <!-- live view -->
   <div id="view" hidden>
     <section class="card">
       <div class="hero">
         <div class="ring">
-          <svg width="92" height="92" viewBox="0 0 92 92" aria-hidden="true">
-            <circle cx="46" cy="46" r="40" fill="none" stroke="var(--track)" stroke-width="9"/>
-            <circle id="arc" cx="46" cy="46" r="40" fill="none" stroke="var(--run)" stroke-width="9"
-                    stroke-linecap="round" stroke-dasharray="251.3" stroke-dashoffset="251.3"
-                    style="transition: stroke-dashoffset .6s"/>
+          <svg width="104" height="104" viewBox="0 0 104 104" aria-hidden="true">
+            <circle cx="52" cy="52" r="45" fill="none" stroke="var(--track)" stroke-width="10"/>
+            <circle id="arc" cx="52" cy="52" r="45" fill="none" stroke="var(--run)" stroke-width="10"
+                    stroke-linecap="round" stroke-dasharray="282.7" stroke-dashoffset="282.7" style="transition: stroke-dashoffset .6s"/>
           </svg>
-          <div class="pct" id="pct">–</div>
+          <div class="pct"><div><b class="num" id="pct">–</b><small>overall</small></div></div>
         </div>
-        <div>
-          <div class="state idle" id="state">waiting</div>
-          <div class="headline" id="headline">Waiting for flash #<span id="idshow"></span>…</div>
-          <div class="meta" id="meta"></div>
-          <div class="age" id="age"></div>
+        <div style="min-width:0">
+          <span class="state idle" id="state">waiting</span>
+          <div class="headline" id="headline">Waiting for #<span id="idshow"></span>…</div>
+          <div class="sub" id="what"></div>
+          <div class="sub" id="age"></div>
         </div>
       </div>
+      <div class="times">
+        <div><span>Elapsed</span><b class="num" id="elapsed">–</b></div>
+        <div><span>Time left</span><b class="num" id="eta">–</b></div>
+        <div><span>Done at</span><b class="num" id="doneat">–</b></div>
+      </div>
+      <div class="banner" id="banner" hidden></div>
     </section>
-    <section class="card" id="steps"><div class="empty" id="nodata">No status for this ID yet. Is the flash running?</div></section>
+
+    <section class="card" id="statsCard" hidden>
+      <h2>Live details</h2>
+      <div class="stats" id="stats"></div>
+    </section>
+
+    <section class="card" id="chartsCard" hidden>
+      <h2>History</h2>
+      <div class="charts">
+        <div class="chart"><div class="lbl"><span>Progress</span><b id="cProgV">–</b></div><svg id="cProg" viewBox="0 0 300 84" preserveAspectRatio="none"></svg></div>
+        <div class="chart" id="speedWrap"><div class="lbl"><span>Speed</span><b id="cRateV">–</b></div><svg id="cRate" viewBox="0 0 300 84" preserveAspectRatio="none"></svg></div>
+      </div>
+    </section>
+
     <section class="card">
-      <h2>Recent log</h2>
+      <h2>Steps</h2>
+      <div id="steps"><div class="empty">No status for this ID yet. Is it running?</div></div>
+    </section>
+
+    <section class="card">
+      <h2>Event log</h2>
       <pre id="log">–</pre>
     </section>
     <div style="text-align:center"><button class="link" id="other">Track another ID</button></div>
   </div>
 
-  <footer>Live over MQTT · broker.hivemq.com · topic <code id="topic">ddlc-os/track/…</code></footer>
+  <footer>Live over MQTT · broker.hivemq.com · <code id="topic">ddlc-os/track/…</code></footer>
 </main>
 
 <script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
 <script>
   const $ = (id) => document.getElementById(id);
   const ICON = { done: "✓", fail: "!", warn: "!", skip: "–", wait: "", run: "" };
-  const STATE_TEXT = { running: "in progress", done: "finished", failed: "stopped", idle: "waiting" };
-  let client = null, topic = null, last = null, gotAt = 0;
+  const STATE_TEXT = { running: "● in progress", done: "✓ finished", failed: "✕ stopped", idle: "waiting" };
+  let client = null, topic = null, last = null, gotAt = 0, skew = 0, series = [];
+  const openSteps = new Set();
 
-  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const now = () => Date.now() / 1000 - skew;                 // laptop time, corrected for this device's clock
+  function dur(s) {
+    if (s == null || !isFinite(s) || s < 0) return "–";
+    s = Math.round(s); const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60;
+    return h ? `${h}h ${String(m).padStart(2, "0")}m` : m ? `${m}m ${String(x).padStart(2, "0")}s` : `${x}s`;
+  }
+  const clock = (t) => new Date((t + skew) * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   function setConn(text, cls) { $("conn").textContent = text; $("dot").className = "dot " + cls; }
 
+  // ---------- charts (inline SVG, no library)
+  function drawChart(svg, pts, max, color, fmt, valEl) {
+    if (pts.length < 2) { svg.innerHTML = `<text x="150" y="46" text-anchor="middle" font-size="12" fill="var(--faint)">collecting…</text>`; valEl.textContent = pts.length ? fmt(pts[pts.length - 1][1]) : "–"; return; }
+    const t0 = pts[0][0], t1 = pts[pts.length - 1][0] || t0 + 1, W = 300, H = 84, pad = 4;
+    const mx = Math.max(max || 0, ...pts.map((p) => p[1]), 1e-9);
+    const xy = pts.map(([t, v]) => [((t - t0) / Math.max(1, t1 - t0)) * W, H - pad - (v / mx) * (H - 2 * pad)]);
+    const line = xy.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
+    const grid = [0.25, 0.5, 0.75].map((f) => `<line x1="0" x2="${W}" y1="${(pad + f * (H - 2 * pad)).toFixed(1)}" y2="${(pad + f * (H - 2 * pad)).toFixed(1)}" stroke="var(--line)" stroke-width="1" vector-effect="non-scaling-stroke"/>`).join("");
+    svg.innerHTML = grid + `<path d="${line} L ${W} ${H} L 0 ${H} Z" fill="${color}" opacity=".14"/>` +
+      `<path d="${line}" fill="none" stroke="${color}" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>` +
+      `<circle cx="${xy[xy.length - 1][0].toFixed(1)}" cy="${xy[xy.length - 1][1].toFixed(1)}" r="3" fill="${color}"/>`;
+    valEl.textContent = fmt(pts[pts.length - 1][1]) + (max ? "" : ` · peak ${fmt(mx)}`);
+  }
+
+  function mergeSeries(st) {
+    // the publisher sends its recent samples [t, overall, rate]; add ours too so the chart fills in live
+    for (const p of st.series || []) if (!series.length || p[0] > series[series.length - 1][0]) series.push(p);
+    const lastT = series.length ? series[series.length - 1][0] : 0;
+    if (st.t > lastT + 2) series.push([st.t, st.overall | 0, st.rate ?? null]);
+    if (series.length > 600) series = series.slice(-600);
+  }
+
+  // ---------- render
   function render(st) {
     last = st;
+    if (st.t) skew = Date.now() / 1000 - st.t - 0.5;             // treat the message as ~fresh on arrival
     const pct = Math.max(0, Math.min(100, st.overall | 0));
     $("pct").textContent = pct + "%";
-    $("arc").style.strokeDashoffset = 251.3 * (1 - pct / 100);
+    $("arc").style.strokeDashoffset = 282.7 * (1 - pct / 100);
     $("arc").setAttribute("stroke", st.state === "done" ? "var(--done)" : st.state === "failed" ? "var(--fail)" : "var(--run)");
-    $("state").textContent = STATE_TEXT[st.state] || st.state;
-    $("state").className = "state " + st.state;
+    $("state").textContent = STATE_TEXT[st.state] || st.state; $("state").className = "state " + st.state;
     $("headline").textContent = st.headline;
-    $("meta").textContent = [st.image, st.device].filter(Boolean).join(" → ");
-    $("steps").innerHTML = (st.steps || []).map((s) => `
-      <div class="step">
-        <div class="row"><span class="icon ${esc(s.state)}">${ICON[s.state] ?? ""}</span>
-          <span class="name">${esc(s.name)}</span><span class="num">${s.state === "wait" || s.state === "skip" ? "" : (s.pct | 0) + "%"}</span></div>
+    $("what").textContent = [st.image, st.device].filter(Boolean).join(" → ");
+    const b = $("banner");
+    if (st.state === "done" || st.state === "failed") { b.hidden = false; b.className = "banner " + st.state; b.textContent = st.headline; } else b.hidden = true;
+
+    // stats
+    const stats = (st.stats || []).filter((s) => s && s[1] !== "" && s[1] != null);
+    $("statsCard").hidden = !stats.length;
+    $("stats").innerHTML = stats.map(([k, v]) => `<div><span>${esc(k)}</span><b class="num" title="${esc(v)}">${esc(v)}</b></div>`).join("");
+
+    // charts
+    mergeSeries(st);
+    $("chartsCard").hidden = series.length < 1;
+    drawChart($("cProg"), series.map((p) => [p[0], p[1]]), 100, "var(--run)", (v) => Math.round(v) + "%", $("cProgV"));
+    const rp = series.filter((p) => p[2] != null).map((p) => [p[0], p[2]]);
+    $("speedWrap").hidden = !rp.length;
+    if (rp.length) drawChart($("cRate"), rp, 0, "var(--accent2)", (v) => v.toFixed(1) + " MB/s", $("cRateV"));
+
+    // steps
+    $("steps").innerHTML = (st.steps || []).map((s, i) => {
+      const t = s.started ? (s.ended || now()) - s.started : null;
+      const when = s.started ? `${clock(s.started)}${s.ended ? "–" + clock(s.ended) : ""}` : "";
+      const subs = (s.sub || []).length ? `<details data-i="${i}" ${openSteps.has(i) || (s.state === "run" && !openSteps.size) ? "open" : ""}>
+          <summary>${s.sub.filter((x) => x.state === "done").length} of ${s.sub.length} sub-steps</summary>
+          <ul class="subs">${s.sub.map((x) => `<li class="${esc(x.state)}"><span class="s"></span><span class="n">${esc(x.name)}</span>
+            <span class="d">${x.started ? dur((x.ended || now()) - x.started) : ""}</span></li>`).join("")}</ul></details>` : "";
+      const map = s.map ? `<div class="map"><div class="grid">${[...(s.map.cells || "")].map((c) => `<i class="${c === "o" ? "o" : c === "x" ? "x" : c === "r" ? "r" : ""}"></i>`).join("")}</div>
+          <div class="legend"><span><em style="background:var(--done)"></em>${esc(s.map.ok || "good")}</span><span><em style="background:var(--fail)"></em>${esc(s.map.bad || "bad")}</span><span><em style="background:var(--track)"></em>not yet</span>${s.map.note ? `<span>${esc(s.map.note)}</span>` : ""}</div></div>` : "";
+      return `<div class="step">
+        <div class="row"><span class="icon ${esc(s.state)}">${ICON[s.state] ?? ""}</span><span class="name">${esc(s.name)}</span>
+          <span class="right">${s.state === "wait" || s.state === "skip" ? esc(s.state === "skip" ? "skipped" : "waiting") : `<b class="num">${s.pct | 0}%</b>`}${t != null ? `<br><span class="num">${dur(t)}${when ? " · " + when : ""}</span>` : ""}</span></div>
         <div class="detail">${esc(s.detail)}</div>
-        <div class="bar"><i class="${esc(s.state)}" style="width:${s.pct | 0}%"></i></div>
-      </div>`).join("");
+        <div class="bar"><i class="${esc(s.state)}" style="width:${s.pct | 0}%"></i></div>${map}${subs}</div>`;
+    }).join("") || '<div class="empty">No steps yet</div>';
+    document.querySelectorAll("#steps details").forEach((d) => d.addEventListener("toggle", () => {
+      const i = +d.dataset.i; d.open ? openSteps.add(i) : openSteps.delete(i);
+    }));
+
     $("log").textContent = (st.log || []).join("\n") || "–";
     document.title = (st.state === "done" ? "✓ " : st.state === "failed" ? "! " : pct + "% ") + "DDLC OS Tracker";
     tick();
   }
 
-  // Age is measured from when THIS device received the message (phone and laptop clocks may differ).
   function tick() {
     if (!last) return;
     const s = Math.max(0, Math.round((Date.now() - gotAt) / 1000));
-    const lag = Math.round(Date.now() / 1000 - last.t);
-    const ago = s < 60 ? s + " s ago" : Math.floor(s / 60) + " min ago";
     const finished = last.state !== "running";
-    const old = finished && lag > 3600 ? " · from " + new Date(last.t * 1000).toLocaleString() : "";
     const stale = !finished && s > 20;
-    $("age").textContent = "Updated " + ago + old + (stale ? " · reconnecting…" : "");
+    const lag = Math.round(Date.now() / 1000 - last.t);
+    $("age").textContent = "Updated " + (s < 60 ? s + " s ago" : Math.floor(s / 60) + " min ago") +
+      (finished && lag > 3600 ? " · from " + new Date(last.t * 1000).toLocaleString() : "") + (stale ? " · reconnecting…" : "");
     $("age").style.color = stale ? "var(--fail)" : "";
+    const end = finished ? (last.ended || last.t) : now();
+    $("elapsed").textContent = last.started ? dur(end - last.started) : "–";
+    let eta = finished ? 0 : last.eta;
+    if (!finished && eta != null) eta = Math.max(0, eta - (now() - last.t));
+    $("eta").textContent = finished ? "0s" : eta != null ? dur(eta) : "–";
+    $("doneat").textContent = finished ? clock(last.ended || last.t) : eta != null ? clock(now() + eta) : "–";
+    // live step durations
+    if (!finished) document.querySelectorAll("#steps .step").forEach(() => {});
   }
   setInterval(tick, 1000);
 
@@ -186,12 +324,14 @@
   function track(id) {
     if (!/^\d{3}$/.test(id)) { $("askerr").textContent = "The ID is 3 digits, e.g. 482."; $("askerr").hidden = false; return; }
     if (client && topic) client.unsubscribe(topic);
-    topic = "ddlc-os/track/" + id; last = null; gotAt = 0;
+    topic = "ddlc-os/track/" + id; last = null; gotAt = 0; series = []; openSteps.clear();
     $("topic").textContent = topic; $("idshow").textContent = id;
-    $("headline").textContent = "Waiting for flash #" + id + "…";
+    $("headline").textContent = "Waiting for #" + id + "…";
     $("state").textContent = "waiting"; $("state").className = "state idle"; $("pct").textContent = "–";
-    $("arc").style.strokeDashoffset = 251.3; $("meta").textContent = ""; $("age").textContent = ""; $("log").textContent = "–";
-    $("steps").innerHTML = '<div class="empty">No status for this ID yet. Is the flash running?</div>';
+    $("arc").style.strokeDashoffset = 282.7; ["what", "age"].forEach((k) => ($(k).textContent = ""));
+    ["elapsed", "eta", "doneat"].forEach((k) => ($(k).textContent = "–"));
+    $("log").textContent = "–"; $("statsCard").hidden = true; $("chartsCard").hidden = true; $("banner").hidden = true;
+    $("steps").innerHTML = '<div class="empty">No status for this ID yet. Is it running?</div>';
     $("ask").hidden = true; $("view").hidden = false;
     history.replaceState(null, "", "?id=" + id);
     try { localStorage.setItem("ddlc-track-id", id); } catch (e) {}
@@ -221,7 +361,6 @@
   if (qid) track(qid);
   else { try { const s = localStorage.getItem("ddlc-track-id"); if (s) $("idbox").placeholder = s; } catch (e) {} $("idbox").focus(); }
 
-  // Remove the old SMART LAB offline cache from phones that installed it.
   if ("serviceWorker" in navigator) navigator.serviceWorker.getRegistrations().then((rs) => rs.forEach((r) => r.unregister()));
   if (window.caches) caches.keys().then((ks) => ks.forEach((k) => caches.delete(k)));
 </script>
