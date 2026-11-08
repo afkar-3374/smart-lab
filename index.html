@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>DDLC OS Tracker</title>
-<meta name="description" content="Live, detailed progress of a DDLC OS build or SD card flash. Enter the 3-digit tracking ID.">
+<title>DDLC.AI OS Tracker</title>
+<meta name="description" content="Live, detailed progress of a DDLC.AI OS build or SD card flash. Enter the 3-digit tracking ID.">
 <meta name="theme-color" content="#002d07">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23008100'/%3E%3Cpath d='M18 33l9 9 19-20' stroke='white' stroke-width='7' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <style>
@@ -126,7 +126,7 @@
 <body>
 <main>
   <header>
-    <h1><b>DDLC OS</b> tracker</h1>
+    <h1><b>DDLC.AI OS</b> tracker</h1>
     <div class="conn"><span class="dot" id="dot"></span><span id="conn">offline</span></div>
   </header>
 
@@ -282,7 +282,7 @@
     }));
 
     $("log").textContent = (st.log || []).join("\n") || "–";
-    document.title = (st.state === "done" ? "✓ " : st.state === "failed" ? "! " : pct + "% ") + "DDLC OS Tracker";
+    document.title = (st.state === "done" ? "✓ " : st.state === "failed" ? "! " : pct + "% ") + "DDLC.AI OS Tracker";
     tick();
   }
 

@@ -1,6 +1,6 @@
-# DDLC OS Tracker
+# DDLC.AI OS Tracker
 
-Live tracking page for DDLC OS SD card flashes, served at <https://smartlab.electrosparkzz.in/>.
+Live tracking page for DDLC.AI OS SD card flashes, served at <https://smartlab.electrosparkzz.in/>.
 Enter the 3-digit tracking ID printed by `tools/ddlc-flash` (or open `?id=123`).
 
 Source of truth: `tracker/index.html` in the private repo AI-DDLC/ddlc-os; copy it here to deploy.
