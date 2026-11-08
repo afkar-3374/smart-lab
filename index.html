@@ -98,7 +98,7 @@
   const $ = (id) => document.getElementById(id);
   const ICON = { done: "✓", fail: "!", skip: "–", wait: "", run: "" };
   const STATE_TEXT = { running: "in progress", done: "finished", failed: "stopped", idle: "waiting" };
-  let last = null;
+  let last = null, gotAt = 0;
 
   function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
 
@@ -124,15 +124,28 @@
     tick();
   }
 
+  // Age is measured from when THIS phone received the last message (phone clock vs laptop clock may differ).
   function tick() {
     if (!last) return;
-    const s = Math.max(0, Math.round(Date.now() / 1000 - last.t));
+    const s = Math.max(0, Math.round((Date.now() - gotAt) / 1000));
     const ago = s < 60 ? s + " s ago" : Math.floor(s / 60) + " min ago";
-    const stale = s > 30 && last.state === "running";
-    $("age").textContent = "Updated " + ago + (stale ? " · laptop not reporting" : "");
+    const stale = s > 20 && last.state === "running";
+    $("age").textContent = "Updated " + ago + (stale ? " · reconnecting…" : "");
     $("age").style.color = stale ? "var(--fail)" : "";
   }
   setInterval(tick, 1000);
+
+  // Phones often drop the WebSocket silently (screen off, network switch): if nothing arrives for 15 s, reconnect.
+  setInterval(() => {
+    if (gotAt && Date.now() - gotAt > 15000 && last && last.state === "running") {
+      gotAt = Date.now() - 10000;
+      setConn("reconnecting", "");
+      client.end(true, () => client.reconnect());
+    }
+  }, 5000);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && gotAt && Date.now() - gotAt > 8000) client.end(true, () => client.reconnect());
+  });
 
   function setConn(text, cls) { $("conn").textContent = text; $("dot").className = "dot " + cls; }
 
@@ -144,7 +157,7 @@
   client.on("reconnect", () => setConn("reconnecting", ""));
   client.on("offline", () => setConn("offline", "off"));
   client.on("error", () => setConn("error", "off"));
-  client.on("message", (t, buf) => { try { render(JSON.parse(buf.toString())); } catch (e) {} });
+  client.on("message", (t, buf) => { try { gotAt = Date.now(); render(JSON.parse(buf.toString())); setConn("live", "on"); } catch (e) {} });
 
   // Remove the old SMART LAB offline cache from phones that installed it.
   if ("serviceWorker" in navigator) {
