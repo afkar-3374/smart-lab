@@ -1,10 +1,12 @@
-# DDLC OS Status
+# DDLC OS Tracker
 
-Live status page for the DDLC OS build, SD card test, image write and check, served at
-<https://smartlab.electrosparkzz.in/>.
+Live tracking page for DDLC OS SD card flashes, served at <https://smartlab.electrosparkzz.in/>.
+Enter the 3-digit tracking ID printed by `tools/ddlc-flash` (or open `?id=123`).
 
-- The laptop runs `~/ddlc-os-status.py`, which reads the build and flash logs and publishes a retained JSON
-  message every 3 s to `broker.hivemq.com`, topic `ddlc-os/afkar3374/status`. Progress only, no keys or passwords.
+Source of truth: `tracker/index.html` in the private repo AI-DDLC/ddlc-os; copy it here to deploy.
+
+- `ddlc-flash` publishes a retained JSON message every 3 s to `broker.hivemq.com`, topic
+  `ddlc-os/track/<ID>`. Progress only, no keys or passwords.
 - `index.html` subscribes over `wss://broker.hivemq.com:8884/mqtt` (mqtt.js 5.10.1) and shows overall %,
   each step, and the recent log.
 - `sw.js` only removes the old SMART LAB offline cache from phones that had installed it.
